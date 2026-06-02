@@ -1,15 +1,24 @@
 {
-  "version": 2,
-  "builds": [
-    {
-      "src": "api/index.py",
-      "use": "@vercel/python"
+  "experimentalServices": {
+    "app": {
+      "entrypoint": "api/index.py",
+      "framework": "fastapi",
+      "routePrefix": "/",
+      "memory": 1024,
+      "maxDuration": 60,
+      "includeFiles": [
+        "backend/**",
+        "frontend/**",
+        "database/**",
+        "requirements.txt"
+      ],
+      "excludeFiles": [
+        ".venv/**",
+        "outputs/**",
+        "tools/**",
+        "*.log",
+        "*tunnel*.log"
+      ]
     }
-  ],
-  "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "api/index.py"
-    }
-  ]
+  }
 }
