@@ -1,6 +1,8 @@
 """
 services/face_service.py
-Face verification using dlib-based 128-d face encodings via face_recognition library.
+Face verification using dlib-based 128-d face encodings via face_recognition
+when available. Lightweight deployments fall back to a Pillow/NumPy image
+descriptor so Vercel does not need dlib or OpenCV.
 Lower Euclidean distance = better match (threshold ~0.55 is strict, 0.6 is default).
 """
 import io
@@ -62,31 +64,25 @@ def extract_face_encoding(image_bytes: bytes) -> np.ndarray | None:
 
 def _fallback_face_encoding(image_bytes: bytes) -> np.ndarray | None:
     """
-    OpenCV Haar-cascade fallback when dlib is not available.
-    Uses HOG features as a rough (non-production) encoding.
+    Lightweight fallback when dlib/face_recognition is not available.
+    This is a rough image descriptor for demos, not production face recognition.
     """
     try:
-        import cv2
-        nparr = np.frombuffer(image_bytes, np.uint8)
-        img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-
-        face_cascade = cv2.CascadeClassifier(
-            cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
-        )
-        faces = face_cascade.detectMultiScale(gray, 1.1, 4)
-        if len(faces) == 0:
+        img = Image.open(io.BytesIO(image_bytes)).convert("L")
+        width, height = img.size
+        if width < 32 or height < 32:
             return None
 
-        x, y, w, h = faces[0]
-        face_roi = cv2.resize(gray[y:y+h, x:x+w], (64, 64))
-
-        hog = cv2.HOGDescriptor(
-            _winSize=(64, 64), _blockSize=(16, 16),
-            _blockStride=(8, 8), _cellSize=(8, 8), _nbins=9
-        )
-        desc = hog.compute(face_roi)
-        return desc.flatten()[:128]
+        side = min(width, height)
+        left = (width - side) // 2
+        top = (height - side) // 2
+        crop = img.crop((left, top, left + side, top + side)).resize((16, 8))
+        descriptor = np.asarray(crop, dtype=np.float64).flatten() / 255.0
+        descriptor = descriptor - descriptor.mean()
+        norm = np.linalg.norm(descriptor)
+        if norm == 0:
+            return None
+        return descriptor / norm
     except Exception as e:
         logger.error(f"Fallback face encoding failed: {e}")
         return None
