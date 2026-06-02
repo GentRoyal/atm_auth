@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>SecureBank – Face Verification</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg:      #f0f4f8;
+    --card:    #ffffff;
+    --primary: #0a2540;
+    --accent:  #00c853;
+    --accent2: #0057ff;
+    --text:    #1a2840;
+    --muted:   #6b7a8d;
+    --border:  #dde3ec;
+    --danger:  #e53935;
+    --mono:    'DM Mono', monospace;
+    --ui:      'DM Sans', sans-serif;
+    --radius:  16px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    background: var(--bg);
+    font-family: var(--ui);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0 0 env(safe-area-inset-bottom);
+  }
+
+  /* Top bar */
+  .topbar {
+    width: 100%;
+    max-width: 420px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 20px 10px;
+  }
+  .bank-name {
+    font-family: var(--mono);
+    font-weight: 500;
+    color: var(--primary);
+    font-size: 0.85rem;
+    letter-spacing: 2px;
+  }
+  .secure-badge {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: rgba(0,200,83,0.1);
+    color: var(--accent);
+    border-radius: 20px;
+    padding: 4px 10px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+  }
+
+  /* Main card */
+  .card {
+    width: 100%;
+    max-width: 420px;
+    margin: 0 auto;
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 24px 20px;
+    box-shadow: 0 4px 30px rgba(0,0,0,0.08);
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    min-height: calc(100vh - 80px);
+  }
+
+  .card-header { text-align: center; }
+  .card-header h1 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+  .card-header p {
+    color: var(--muted);
+    font-size: 0.85rem;
+    line-height: 1.5;
+  }
+
+  /* Steps indicator */
+  .steps-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+  }
+  .step-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+  .step-circle {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 600;
+    background: var(--border);
+    color: var(--muted);
+    transition: all 0.3s;
+  }
+  .step-circle.done {
+    background: var(--accent);
+    color: white;
+  }
+  .step-circle.active {
+    background: var(--accent2);
+    color: white;
+    box-shadow: 0 0 0 4px rgba(0,87,255,0.15);
+  }
+  .step-label { font-size: 0.58rem; color: var(--muted); letter-spacing: 0.5px; }
+  .step-connector {
+    width: 40px; height: 2px;
+    background: var(--border);
+    margin-bottom: 14px;
+    flex-shrink: 0;
+  }
+  .step-connector.done { background: var(--accent); }
+
+  /* Camera viewport */
+  .camera-wrap {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 3/4;
+    border-radius: var(--radius);
+    overflow: hidden;
+    background: #0a1420;
+    border: 2px solid var(--border);
+  }
+  .camera-wrap.active { border-color: var(--accent2); }
+  .camera-wrap.success { border-color: var(--accent); }
+  .camera-wrap.error { border-color: var(--danger); }
+
+  #videoEl {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    transform: scaleX(-1);   /* mirror for selfie */
+  }
+
+  /* Overlay guide */
+  .face-guide {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+  }
+  .face-oval {
+    width: 62%;
+    aspect-ratio: 3/4;
+    border: 3px solid rgba(255,255,255,0.5);
+    border-radius: 50%;
+    box-shadow: 0 0 0 9999px rgba(0,0,0,0.35);
+    transition: border-color 0.3s;
+  }
+  .camera-wrap.active .face-oval { border-color: rgba(0,120,255,0.8); }
+  .camera-wrap.success .face-oval { border-color: rgba(0,200,83,0.9); }
+
+  /* Corner brackets */
+  .face-guide::before, .face-guide::after {
+    content: '';
+    position: absolute;
+    width: 20px; height: 20px;
+  }
+
+  .camera-tip {
+    position: absolute;
+    bottom: 12px; left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.6);
+    color: rgba(255,255,255,0.9);
+    font-size: 0.65rem;
+    padding: 5px 12px;
+    border-radius: 20px;
+    white-space: nowrap;
+    letter-spacing: 0.3px;
+  }
+
+  /* Placeholder state */
+  .camera-placeholder {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    color: rgba(255,255,255,0.5);
+  }
+  .camera-placeholder .icon { font-size: 3rem; }
+  .camera-placeholder p { font-size: 0.75rem; text-align: center; line-height: 1.5; padding: 0 20px; }
+
+  /* Canvas (hidden, used for capture) */
+  #captureCanvas { display: none; }
+
+  /* Flash effect */
+  .flash-overlay {
+    position: absolute;
+    inset: 0;
+    background: white;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.05s;
+  }
+  .flash-overlay.flash { opacity: 1; }
+
+  /* Status banner */
+  .status-banner {
+    display: none;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    font-weight: 500;
+  }
+  .status-banner.show { display: flex; }
+  .status-banner.success { background: rgba(0,200,83,0.1); color: #007a30; }
+  .status-banner.error   { background: rgba(229,57,53,0.1);  color: var(--danger); }
+  .status-banner.info    { background: rgba(0,87,255,0.08);   color: var(--accent2); }
+  .status-banner.warn    { background: rgba(255,160,0,0.1);   color: #b45a00; }
+  .banner-icon { font-size: 1.1rem; flex-shrink: 0; }
+
+  /* Timer bar */
+  .timer-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .timer-label {
+    font-size: 0.7rem;
+    color: var(--muted);
+    white-space: nowrap;
+    font-family: var(--mono);
+    min-width: 52px;
+  }
+  .timer-bar-bg {
+    flex: 1;
+    height: 6px;
+    background: var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .timer-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent2), var(--accent));
+    border-radius: 3px;
+    transition: width 1s linear;
+  }
+
+  /* Buttons */
+  .btn-main {
+    width: 100%;
+    padding: 16px;
+    border-radius: 14px;
+    border: none;
+    font-family: var(--ui);
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.3px;
+  }
+  .btn-camera {
+    background: var(--accent2);
+    color: white;
+    box-shadow: 0 4px 16px rgba(0,87,255,0.3);
+  }
+  .btn-camera:hover:not(:disabled) { box-shadow: 0 6px 24px rgba(0,87,255,0.4); transform: translateY(-1px); }
+  .btn-capture {
+    background: var(--accent);
+    color: white;
+    box-shadow: 0 4px 16px rgba(0,200,83,0.3);
+  }
+  .btn-capture:hover:not(:disabled) { box-shadow: 0 6px 24px rgba(0,200,83,0.4); transform: translateY(-1px); }
+  .btn-retry {
+    background: var(--bg);
+    color: var(--text);
+    border: 2px solid var(--border);
+  }
+  .btn-main:disabled { opacity: 0.4; cursor: not-allowed; transform: none !important; }
+
+  /* Loading spinner */
+  .spinner {
+    width: 20px; height: 20px;
+    border: 3px solid rgba(255,255,255,0.3);
+    border-top: 3px solid white;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    display: inline-block;
+    vertical-align: middle;
+    margin-right: 8px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Success state */
+  .success-screen {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 30px 0;
+    text-align: center;
+  }
+  .success-screen.show { display: flex; }
+  .check-circle {
+    width: 80px; height: 80px;
+    background: linear-gradient(135deg, #00c853, #00e676);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    box-shadow: 0 8px 30px rgba(0,200,83,0.35);
+    animation: popIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  @keyframes popIn { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  .success-title { font-size: 1.4rem; font-weight: 700; color: var(--text); }
+  .success-sub { color: var(--muted); font-size: 0.9rem; line-height: 1.5; }
+  .success-detail {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--muted);
+    background: var(--bg);
+    padding: 10px 16px;
+    border-radius: 8px;
+    width: 100%;
+    text-align: center;
+  }
+
+  .user-greeting {
+    background: var(--bg);
+    border-radius: 12px;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .user-avatar {
+    width: 38px; height: 38px;
+    background: linear-gradient(135deg, var(--accent2), var(--accent));
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 700;
+    font-size: 0.9rem;
+  }
+  .user-info { flex: 1; }
+  .user-name { font-weight: 600; color: var(--text); font-size: 0.9rem; }
+  .user-sub { color: var(--muted); font-size: 0.72rem; margin-top: 1px; }
+
+  /* Error / expired screens */
+  .error-screen {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 20px 0;
+    text-align: center;
+  }
+  .error-screen.show { display: flex; }
+  .error-icon { font-size: 3rem; }
+  .error-title { font-size: 1.2rem; font-weight: 600; color: var(--danger); }
+  .error-sub { color: var(--muted); font-size: 0.85rem; line-height: 1.5; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <span class="bank-name">◈ SECUREBANK</span>
+  <div class="secure-badge">🔒 SECURE</div>
+</div>
+
+<div class="card">
+
+  <!-- Loading state -->
+  <div id="loadingView" style="display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;gap:12px">
+    <div style="width:40px;height:40px;border:3px solid var(--border);border-top:3px solid var(--accent2);border-radius:50%;animation:spin 0.8s linear infinite"></div>
+    <p style="color:var(--muted);font-size:0.85rem">Verifying your link...</p>
+  </div>
+
+  <!-- Expired / invalid state -->
+  <div class="error-screen" id="errorView">
+    <div class="error-icon">⏰</div>
+    <div class="error-title" id="errorTitle">Link Expired</div>
+    <div class="error-sub" id="errorSub">This verification link has expired or is invalid. Please visit the ATM again to start a new session.</div>
+  </div>
+
+  <!-- Main verification flow -->
+  <div id="mainView" style="display:none;flex-direction:column;gap:18px;flex:1">
+
+    <div class="card-header">
+      <h1>Face Verification</h1>
+      <p>Complete your ATM authentication by verifying your face</p>
+    </div>
+
+    <!-- User greeting -->
+    <div class="user-greeting" id="userGreeting" style="display:none">
+      <div class="user-avatar" id="userAvatar">?</div>
+      <div class="user-info">
+        <div class="user-name" id="userNameDisplay">Loading...</div>
+        <div class="user-sub">ATM Face Authentication</div>
+      </div>
+    </div>
+
+    <!-- Steps -->
+    <div class="steps-row">
+      <div class="step-item">
+        <div class="step-circle done">✓</div>
+        <div class="step-label">CARD</div>
+      </div>
+      <div class="step-connector done"></div>
+      <div class="step-item">
+        <div class="step-circle done">✓</div>
+        <div class="step-label">VOICE</div>
+      </div>
+      <div class="step-connector done"></div>
+      <div class="step-item">
+        <div class="step-circle active">3</div>
+        <div class="step-label">FACE</div>
+      </div>
+      <div class="step-connector" id="lastConnector"></div>
+      <div class="step-item">
+        <div class="step-circle" id="doneCircle">4</div>
+        <div class="step-label">DONE</div>
+      </div>
+    </div>
+
+    <!-- Timer -->
+    <div class="timer-wrap">
+      <span class="timer-label" id="timerLabel">10:00</span>
+      <div class="timer-bar-bg">
+        <div class="timer-bar" id="timerBar" style="width:100%"></div>
+      </div>
+    </div>
+
+    <!-- Camera area -->
+    <div class="camera-wrap" id="cameraWrap">
+      <video id="videoEl" autoplay playsinline muted></video>
+      <div class="face-guide">
+        <div class="face-oval" id="faceOval"></div>
+      </div>
+      <div class="camera-tip" id="cameraTip">Position your face in the oval</div>
+      <div class="flash-overlay" id="flashOverlay"></div>
+
+      <div class="camera-placeholder" id="cameraPlaceholder">
+        <span class="icon">📷</span>
+        <p>Tap "Start Camera" to activate<br>your front-facing camera</p>
+      </div>
+    </div>
+    <canvas id="captureCanvas"></canvas>
+
+    <!-- Status banner -->
+    <div class="status-banner" id="statusBanner">
+      <span class="banner-icon" id="bannerIcon">ℹ️</span>
+      <span id="bannerText">Ready to begin</span>
+    </div>
+
+    <!-- Buttons -->
+    <button class="btn-main btn-camera" id="startCameraBtn" onclick="startCamera()">
+      Start Camera
+    </button>
+    <button class="btn-main btn-capture" id="captureBtn" onclick="captureAndVerify()" style="display:none">
+      📸 Capture & Verify
+    </button>
+    <button class="btn-main btn-retry" id="retryBtn" onclick="retryCapture()" style="display:none">
+      Try Again
+    </button>
+
+  </div><!-- /mainView -->
+
+  <!-- Success screen -->
+  <div class="success-screen" id="successView">
+    <div class="check-circle">✓</div>
+    <div class="success-title">Identity Verified!</div>
+    <div class="success-sub">
+      Your face has been confirmed.<br>
+      Return to the ATM to complete your transaction.
+    </div>
+    <div class="success-detail" id="successDetail">Session authenticated • Return to ATM</div>
+    <div style="font-size:2rem;margin-top:8px">🏧</div>
+    <p style="color:var(--muted);font-size:0.78rem;line-height:1.6">
+      The ATM screen will update automatically.<br>
+      You can close this page.
+    </p>
+  </div>
+
+</div><!-- /card -->
+
+<script>
+// Token injected server-side; fallback to URL param for dev
+const FACE_TOKEN = '{{FACE_TOKEN}}' !== '{{FACE_TOKEN}}' ? '{{FACE_TOKEN}}' :
+  new URLSearchParams(window.location.search).get('token');
+const API_BASE = '{{API_BASE}}' !== '{{API_BASE}}' ? '{{API_BASE}}' : '';
+
+let videoStream = null;
+let timerInterval = null;
+let expiresAt = null;
+
+// ── Init ─────────────────────────────────────────────────
+window.addEventListener('load', async () => {
+  if (!FACE_TOKEN) {
+    showError('Invalid Link', 'No authentication token found. Please scan the QR code from the ATM again.');
+    return;
+  }
+  await loadSessionInfo();
+});
+
+async function loadSessionInfo() {
+  try {
+    const res = await fetch(`${API_BASE}/mobile/session-info?token=${FACE_TOKEN}`);
+    const data = await res.json();
+
+    if (!res.ok || data.expired) {
+      showError('Link Expired', 'This link has expired. Please visit the ATM to start a new session.');
+      return;
+    }
+
+    if (data.stage === 'authenticated') {
+      showAlreadyVerified();
+      return;
+    }
+
+    // Show main view
+    document.getElementById('loadingView').style.display = 'none';
+    document.getElementById('mainView').style.display = 'flex';
+
+    // User greeting
+    const greeting = document.getElementById('userGreeting');
+    greeting.style.display = 'flex';
+    document.getElementById('userNameDisplay').textContent = `Hi, ${data.user_name}!`;
+    document.getElementById('userAvatar').textContent = data.user_name.charAt(0).toUpperCase();
+
+    // Start countdown timer
+    expiresAt = new Date(data.expires_at);
+    startTimer();
+
+  } catch (e) {
+    showError('Connection Error', 'Could not verify your link. Please check your connection and try again.');
+  }
+}
+
+// ── Timer ─────────────────────────────────────────────────
+function startTimer() {
+  updateTimer();
+  timerInterval = setInterval(updateTimer, 1000);
+}
+
+function updateTimer() {
+  const now = new Date();
+  const diff = Math.max(0, expiresAt - now);
+  const mins = Math.floor(diff / 60000);
+  const secs = Math.floor((diff % 60000) / 1000);
+  const total = 10 * 60 * 1000;
+
+  document.getElementById('timerLabel').textContent =
+    `${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}`;
+  document.getElementById('timerBar').style.width = (diff / total * 100) + '%';
+
+  if (diff <= 60000) {
+    document.getElementById('timerBar').style.background = '#e53935';
+    document.getElementById('timerLabel').style.color = '#e53935';
+  }
+
+  if (diff === 0) {
+    clearInterval(timerInterval);
+    showError('Session Expired', 'Your session has expired. Please visit the ATM to start a new session.');
+  }
+}
+
+// ── Camera ────────────────────────────────────────────────
+async function startCamera() {
+  const btn = document.getElementById('startCameraBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Starting camera...';
+
+  try {
+    videoStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
+      audio: false,
+    });
+
+    const video = document.getElementById('videoEl');
+    video.srcObject = videoStream;
+    await video.play();
+
+    document.getElementById('cameraPlaceholder').style.display = 'none';
+    document.getElementById('cameraWrap').classList.add('active');
+    document.getElementById('startCameraBtn').style.display = 'none';
+    document.getElementById('captureBtn').style.display = 'block';
+    document.getElementById('cameraTip').textContent = 'Look straight at the camera, then tap Capture';
+
+    showBanner('info', '📷', 'Camera active. Centre your face in the oval and tap Capture.');
+
+  } catch (e) {
+    showBanner('error', '🚫', 'Camera access denied. Please allow camera permission and refresh.');
+    btn.disabled = false;
+    btn.innerHTML = 'Start Camera';
+  }
+}
+
+// ── Capture & Verify ──────────────────────────────────────
+async function captureAndVerify() {
+  const video = document.getElementById('videoEl');
+  const canvas = document.getElementById('captureCanvas');
+  const ctx = canvas.getContext('2d');
+
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  ctx.drawImage(video, 0, 0);
+
+  // Flash effect
+  const flash = document.getElementById('flashOverlay');
+  flash.classList.add('flash');
+  setTimeout(() => flash.classList.remove('flash'), 150);
+
+  // Stop camera
+  if (videoStream) videoStream.getTracks().forEach(t => t.stop());
+
+  document.getElementById('captureBtn').style.display = 'none';
+  document.getElementById('startCameraBtn').style.display = 'none';
+  showBanner('info', '⏳', 'Verifying your face...');
+
+  canvas.toBlob(async (blob) => {
+    if (!blob) {
+      showBanner('error', '⚠️', 'Could not capture image. Please try again.');
+      document.getElementById('retryBtn').style.display = 'block';
+      return;
+    }
+    await submitFace(blob);
+  }, 'image/jpeg', 0.92);
+}
+
+async function submitFace(blob) {
+  const form = new FormData();
+  form.append('token', FACE_TOKEN);
+  form.append('image', blob, 'selfie.jpg');
+
+  try {
+    const res = await fetch(`${API_BASE}/mobile/verify-face`, { method: 'POST', body: form });
+    const data = await res.json();
+
+    if (res.ok && data.success) {
+      clearInterval(timerInterval);
+      document.getElementById('mainView').style.display = 'none';
+      document.getElementById('successView').classList.add('show');
+      const confidence = Math.max(0, Math.min(100, Math.round((1 - data.score) * 100)));
+      document.getElementById('successDetail').textContent =
+        `Score: ${confidence}% match • Session authenticated`;
+      document.getElementById('lastConnector').classList.add('done');
+      document.getElementById('doneCircle').classList.add('done');
+      document.getElementById('doneCircle').textContent = '✓';
+    } else {
+      const msg = data.detail || 'Face not recognized. Please try again in better lighting.';
+      showBanner('error', '❌', msg);
+      document.getElementById('cameraWrap').classList.remove('active');
+      document.getElementById('cameraWrap').classList.add('error');
+      document.getElementById('retryBtn').style.display = 'block';
+    }
+  } catch (e) {
+    showBanner('error', '⚠️', 'Connection error. Please check your connection and try again.');
+    document.getElementById('retryBtn').style.display = 'block';
+  }
+}
+
+function retryCapture() {
+  document.getElementById('cameraWrap').classList.remove('error');
+  document.getElementById('cameraPlaceholder').style.display = 'flex';
+  document.getElementById('retryBtn').style.display = 'none';
+  document.getElementById('startCameraBtn').style.display = 'block';
+  document.getElementById('startCameraBtn').disabled = false;
+  document.getElementById('startCameraBtn').textContent = 'Start Camera';
+  showBanner('warn', '💡', 'Tip: Use good lighting and face the camera directly.');
+}
+
+// ── Helpers ───────────────────────────────────────────────
+function showBanner(type, icon, text) {
+  const b = document.getElementById('statusBanner');
+  b.className = `status-banner show ${type}`;
+  document.getElementById('bannerIcon').textContent = icon;
+  document.getElementById('bannerText').textContent = text;
+}
+
+function showError(title, sub) {
+  document.getElementById('loadingView').style.display = 'none';
+  document.getElementById('mainView').style.display = 'none';
+  const e = document.getElementById('errorView');
+  e.classList.add('show');
+  document.getElementById('errorTitle').textContent = title;
+  document.getElementById('errorSub').textContent = sub;
+}
+
+function showAlreadyVerified() {
+  document.getElementById('loadingView').style.display = 'none';
+  document.getElementById('mainView').style.display = 'none';
+  document.getElementById('successView').classList.add('show');
+  document.getElementById('successDetail').textContent = 'Already verified • Return to ATM';
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,1043 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SecureBank ATM</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Exo+2:wght@300;400;600;700&display=swap');
+
+  :root {
+    --bg:        #0a0e1a;
+    --panel:     #111827;
+    --screen:    #0d1f0d;
+    --green:     #00ff88;
+    --green-dim: #00aa55;
+    --amber:     #ffb300;
+    --red:       #ff3b3b;
+    --border:    #1e3a5f;
+    --text:      #c8e6c9;
+    --mono:      'Share Tech Mono', monospace;
+    --ui:        'Exo 2', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--ui);
+    overflow: hidden;
+  }
+
+  /* Scanline overlay */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,255,136,0.015) 2px,
+      rgba(0,255,136,0.015) 4px
+    );
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  .atm-machine {
+    width: 480px;
+    background: linear-gradient(160deg, #1a2035 0%, #0f1520 100%);
+    border-radius: 20px;
+    border: 2px solid #1e3a5f;
+    box-shadow:
+      0 0 60px rgba(0,255,136,0.08),
+      0 40px 80px rgba(0,0,0,0.8),
+      inset 0 1px 0 rgba(255,255,255,0.05);
+    padding: 28px;
+    position: relative;
+  }
+
+  .bank-logo {
+    text-align: center;
+    margin-bottom: 18px;
+  }
+  .bank-logo .name {
+    font-family: var(--mono);
+    color: var(--green);
+    font-size: 1.4rem;
+    letter-spacing: 4px;
+    text-shadow: 0 0 20px var(--green);
+  }
+  .bank-logo .tagline {
+    color: var(--green-dim);
+    font-size: 0.65rem;
+    letter-spacing: 2px;
+    margin-top: 2px;
+  }
+
+  /* Screen */
+  .screen {
+    background: var(--screen);
+    border-radius: 10px;
+    border: 2px solid #0a3020;
+    padding: 20px;
+    min-height: 280px;
+    position: relative;
+    box-shadow:
+      inset 0 2px 12px rgba(0,0,0,0.8),
+      0 0 30px rgba(0,255,136,0.06);
+    overflow: hidden;
+  }
+
+  .screen::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse at 50% 0%, rgba(0,255,136,0.04) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .screen-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #0a3020;
+  }
+  .screen-title {
+    font-family: var(--mono);
+    color: var(--green);
+    font-size: 0.8rem;
+    letter-spacing: 2px;
+  }
+  .time-display {
+    font-family: var(--mono);
+    color: var(--green-dim);
+    font-size: 0.7rem;
+  }
+
+  .screen-content {
+    min-height: 200px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  /* Steps */
+  .step { display: none; flex-direction: column; gap: 12px; }
+  .step.active { display: flex; }
+
+  .step-icon {
+    font-size: 2.5rem;
+    text-align: center;
+    filter: drop-shadow(0 0 10px var(--green));
+  }
+
+  .msg {
+    font-family: var(--mono);
+    color: var(--text);
+    font-size: 0.78rem;
+    line-height: 1.6;
+    text-align: center;
+  }
+
+  .msg.success { color: var(--green); }
+  .msg.error   { color: var(--red); }
+  .msg.warn    { color: var(--amber); }
+
+  /* Input group */
+  .input-group { display: flex; flex-direction: column; gap: 6px; }
+  .input-label {
+    font-family: var(--mono);
+    color: var(--green-dim);
+    font-size: 0.65rem;
+    letter-spacing: 1px;
+  }
+  .atm-input {
+    background: rgba(0,255,136,0.04);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--green);
+    font-family: var(--mono);
+    font-size: 0.9rem;
+    padding: 8px 12px;
+    outline: none;
+    transition: border-color 0.2s;
+    letter-spacing: 2px;
+  }
+  .atm-input:focus { border-color: var(--green-dim); }
+  .atm-input[type="password"] { letter-spacing: 6px; }
+
+  /* Progress bar */
+  .progress-wrap {
+    background: rgba(0,255,136,0.06);
+    border-radius: 4px;
+    height: 4px;
+    overflow: hidden;
+  }
+  .progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--green-dim), var(--green));
+    border-radius: 4px;
+    transition: width 0.4s ease;
+    box-shadow: 0 0 8px var(--green);
+  }
+
+  /* Stage indicator */
+  .stages {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 14px;
+    gap: 4px;
+  }
+  .stage-dot {
+    flex: 1;
+    height: 3px;
+    background: #0a3020;
+    border-radius: 2px;
+    transition: background 0.4s;
+  }
+  .stage-dot.done { background: var(--green-dim); }
+  .stage-dot.active { background: var(--green); box-shadow: 0 0 6px var(--green); }
+
+  /* Voice visualizer */
+  .voice-viz {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    height: 40px;
+    margin: 4px 0;
+  }
+  .voice-bar {
+    width: 4px;
+    background: var(--green-dim);
+    border-radius: 2px;
+    transition: height 0.1s;
+    min-height: 4px;
+  }
+  .voice-viz.recording .voice-bar {
+    animation: voicePulse 0.5s ease-in-out infinite alternate;
+  }
+  @keyframes voicePulse {
+    from { height: 6px; opacity: 0.4; }
+    to   { height: 28px; opacity: 1; }
+  }
+  .voice-viz.recording .voice-bar:nth-child(2)  { animation-delay: 0.06s; }
+  .voice-viz.recording .voice-bar:nth-child(3)  { animation-delay: 0.12s; }
+  .voice-viz.recording .voice-bar:nth-child(4)  { animation-delay: 0.18s; }
+  .voice-viz.recording .voice-bar:nth-child(5)  { animation-delay: 0.24s; }
+  .voice-viz.recording .voice-bar:nth-child(6)  { animation-delay: 0.18s; }
+  .voice-viz.recording .voice-bar:nth-child(7)  { animation-delay: 0.12s; }
+  .voice-viz.recording .voice-bar:nth-child(8)  { animation-delay: 0.06s; }
+
+  /* Polling ring */
+  .poll-ring {
+    width: 60px; height: 60px;
+    border-radius: 50%;
+    border: 3px solid #0a3020;
+    border-top: 3px solid var(--green);
+    animation: spin 1.2s linear infinite;
+    margin: 0 auto;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .face-link-panel {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin: 4px auto 0;
+  }
+  .face-link-panel.show { display: flex; }
+  .face-qr {
+    width: 86px;
+    height: 86px;
+    padding: 6px;
+    border-radius: 6px;
+    background: #fff;
+    border: 1px solid var(--green-dim);
+  }
+  .face-link-action {
+    color: var(--amber);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 7px 9px;
+    font-family: var(--mono);
+    font-size: 0.62rem;
+    line-height: 1.3;
+    text-decoration: none;
+    max-width: 180px;
+  }
+
+  /* Transaction panel */
+  .tx-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 4px;
+  }
+  .tx-btn {
+    background: rgba(0,255,136,0.06);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    padding: 10px 8px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.2s;
+    letter-spacing: 0.5px;
+  }
+  .tx-btn:hover {
+    background: rgba(0,255,136,0.12);
+    border-color: var(--green-dim);
+    color: var(--green);
+  }
+  .tx-btn .tx-icon { font-size: 1.2rem; display: block; margin-bottom: 4px; }
+
+  /* Amount input */
+  .amount-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(0,255,136,0.04);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 12px;
+  }
+  .currency-sym {
+    color: var(--green-dim);
+    font-family: var(--mono);
+    font-size: 0.9rem;
+  }
+  .amount-input {
+    flex: 1;
+    background: none;
+    border: none;
+    color: var(--green);
+    font-family: var(--mono);
+    font-size: 1rem;
+    outline: none;
+    letter-spacing: 1px;
+  }
+
+  /* Bottom controls */
+  .atm-controls {
+    margin-top: 20px;
+    display: flex;
+    gap: 10px;
+  }
+  .btn {
+    flex: 1;
+    padding: 11px;
+    border-radius: 8px;
+    border: none;
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    letter-spacing: 1.5px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-transform: uppercase;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, #006633, #00aa55);
+    color: #fff;
+    box-shadow: 0 4px 14px rgba(0,170,85,0.3);
+  }
+  .btn-primary:hover:not(:disabled) {
+    box-shadow: 0 4px 20px rgba(0,255,136,0.4);
+    transform: translateY(-1px);
+  }
+  .btn-secondary {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    color: var(--text);
+  }
+  .btn-secondary:hover { background: rgba(255,255,255,0.08); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* Card slot */
+  .card-slot-area {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 18px;
+    padding: 12px 14px;
+    background: rgba(0,0,0,0.3);
+    border-radius: 8px;
+    border: 1px solid #1a2540;
+  }
+  .card-slot {
+    width: 48px; height: 32px;
+    background: #050a10;
+    border: 2px solid #1e3a5f;
+    border-radius: 4px;
+    position: relative;
+    overflow: hidden;
+  }
+  .card-slot::after {
+    content: '';
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 40px; height: 2px;
+    background: #1e3a5f;
+  }
+  .card-slot-label {
+    font-family: var(--mono);
+    color: #3a5a7a;
+    font-size: 0.62rem;
+    letter-spacing: 1px;
+    line-height: 1.5;
+  }
+
+  /* Receipt area */
+  .receipt {
+    background: rgba(0,0,0,0.4);
+    border: 1px solid #0a3020;
+    border-radius: 6px;
+    padding: 12px;
+    font-family: var(--mono);
+    color: var(--green-dim);
+    font-size: 0.65rem;
+    line-height: 1.8;
+    letter-spacing: 0.5px;
+    max-height: 160px;
+    overflow-y: auto;
+  }
+  .receipt .rx-line { display: flex; justify-content: space-between; }
+  .receipt .rx-divider { border-top: 1px dashed #0a3020; margin: 6px 0; }
+  .receipt .rx-success { color: var(--green); font-weight: bold; }
+
+  /* Toast */
+  .toast {
+    position: absolute;
+    bottom: 12px; left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: rgba(0,255,136,0.12);
+    border: 1px solid var(--green-dim);
+    border-radius: 6px;
+    color: var(--green);
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    padding: 6px 14px;
+    white-space: nowrap;
+    opacity: 0;
+    transition: all 0.3s;
+    pointer-events: none;
+    letter-spacing: 0.5px;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* Blink cursor */
+  .cursor::after {
+    content: '█';
+    animation: blink 1s step-end infinite;
+    color: var(--green);
+    font-size: 0.7rem;
+  }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  /* Balance display */
+  .balance-display {
+    text-align: center;
+    padding: 14px;
+    background: rgba(0,255,136,0.04);
+    border-radius: 8px;
+    border: 1px solid #0a3020;
+  }
+  .balance-label {
+    font-family: var(--mono);
+    color: var(--green-dim);
+    font-size: 0.6rem;
+    letter-spacing: 2px;
+    margin-bottom: 4px;
+  }
+  .balance-amount {
+    font-family: var(--mono);
+    color: var(--green);
+    font-size: 1.6rem;
+    letter-spacing: 1px;
+    text-shadow: 0 0 20px rgba(0,255,136,0.4);
+  }
+</style>
+</head>
+<body>
+
+<div class="atm-machine">
+  <div class="bank-logo">
+    <div class="name">◈ SECUREBANK</div>
+    <div class="tagline">PIN · FACE · SECURE</div>
+  </div>
+
+  <div class="screen">
+    <div class="screen-header">
+      <span class="screen-title">SECURE ATM v2.1</span>
+      <span class="time-display" id="clockDisplay">00:00:00</span>
+    </div>
+
+    <!-- Stage indicators -->
+    <div class="stages">
+      <div class="stage-dot active" id="dot0" title="Card"></div>
+      <div class="stage-dot" id="dot1" title="PIN"></div>
+      <div class="stage-dot" id="dot2" title="SMS"></div>
+      <div class="stage-dot" id="dot3" title="Face"></div>
+      <div class="stage-dot" id="dot4" title="Transaction"></div>
+    </div>
+
+    <div class="screen-content">
+
+      <!-- STEP 0: Insert Card -->
+      <div class="step active" id="step-card">
+        <div class="step-icon">💳</div>
+        <div class="msg">INSERT YOUR CARD AND ENTER PIN</div>
+        <div class="input-group">
+          <span class="input-label">CARD NUMBER</span>
+          <input class="atm-input" id="cardNumber" type="text" maxlength="19"
+                 placeholder="XXXX XXXX XXXX XXXX" autocomplete="off">
+        </div>
+        <div class="input-group">
+          <span class="input-label">PIN</span>
+          <input class="atm-input" id="pinInput" type="password" maxlength="6"
+                 placeholder="••••" autocomplete="off">
+        </div>
+      </div>
+
+      <!-- STEP 1: Voice
+           Retained for easy re-enable. Current backend config skips this stage. -->
+      <div class="step" id="step-voice">
+        <div class="step-icon">🎙️</div>
+        <div class="msg" id="voiceMsg">PRESS RECORD AND SPEAK YOUR PASSPHRASE CLEARLY</div>
+        <div class="voice-viz" id="voiceViz">
+          <div class="voice-bar" style="height:6px"></div>
+          <div class="voice-bar" style="height:10px"></div>
+          <div class="voice-bar" style="height:18px"></div>
+          <div class="voice-bar" style="height:26px"></div>
+          <div class="voice-bar" style="height:30px"></div>
+          <div class="voice-bar" style="height:22px"></div>
+          <div class="voice-bar" style="height:14px"></div>
+          <div class="voice-bar" style="height:8px"></div>
+        </div>
+        <div class="msg" style="color:var(--green-dim);font-size:0.65rem">
+          "MY VOICE IS MY IDENTITY"
+        </div>
+        <div class="progress-wrap"><div class="progress-bar" id="voiceProgress" style="width:0%"></div></div>
+      </div>
+
+      <!-- STEP 2: SMS Sent / Polling -->
+      <div class="step" id="step-sms">
+        <div class="step-icon">📱</div>
+        <div class="msg success" id="smsMsg">LINK SENT TO YOUR REGISTERED NUMBER</div>
+        <div class="msg" id="phoneMasked" style="color:var(--amber)"></div>
+        <div class="face-link-panel" id="faceLinkPanel">
+          <img class="face-qr" id="faceQr" alt="Face verification QR code">
+          <a class="face-link-action" id="faceAuthLink" target="_blank" rel="noopener">
+            SCAN QR OR OPEN FACE LINK
+          </a>
+        </div>
+        <div style="margin:8px 0">
+          <div class="poll-ring"></div>
+        </div>
+        <div class="msg" id="pollMsg">WAITING FOR FACE VERIFICATION ON YOUR PHONE...</div>
+        <div class="progress-wrap">
+          <div class="progress-bar" id="pollProgress" style="width:0%"></div>
+        </div>
+      </div>
+
+      <!-- STEP 3: Authenticated -->
+      <div class="step" id="step-auth">
+        <div class="step-icon">✅</div>
+        <div class="msg success">AUTHENTICATION SUCCESSFUL</div>
+        <div class="msg" id="welcomeMsg"></div>
+        <div class="msg" style="color:var(--green-dim);font-size:0.7rem">SELECT A TRANSACTION BELOW</div>
+        <div class="tx-grid">
+          <button class="tx-btn" onclick="doTransaction('balance_inquiry')">
+            <span class="tx-icon">💰</span>BALANCE
+          </button>
+          <button class="tx-btn" onclick="showWithdraw()">
+            <span class="tx-icon">💸</span>WITHDRAW
+          </button>
+          <button class="tx-btn" onclick="showDeposit()">
+            <span class="tx-icon">📥</span>DEPOSIT
+          </button>
+          <button class="tx-btn" onclick="showTransfer()">
+            <span class="tx-icon">🔄</span>TRANSFER
+          </button>
+        </div>
+      </div>
+
+      <!-- STEP 3b: Amount entry -->
+      <div class="step" id="step-amount">
+        <div class="step-icon" id="amountIcon">💸</div>
+        <div class="msg" id="amountLabel">ENTER WITHDRAWAL AMOUNT</div>
+        <div class="amount-row">
+          <span class="currency-sym">₦</span>
+          <input class="amount-input" id="amountInput" type="number" min="100" placeholder="0.00">
+        </div>
+        <div class="input-group" id="recipientGroup" style="display:none">
+          <span class="input-label">RECIPIENT ACCOUNT</span>
+          <input class="atm-input" id="recipientInput" type="text" maxlength="20" placeholder="ACCOUNT NUMBER">
+        </div>
+      </div>
+
+      <!-- STEP 4: Receipt -->
+      <div class="step" id="step-receipt">
+        <div class="step-icon">🧾</div>
+        <div class="receipt" id="receiptContent"></div>
+      </div>
+
+    </div><!-- /screen-content -->
+
+    <div class="toast" id="toast"></div>
+  </div><!-- /screen -->
+
+  <!-- Controls -->
+  <div class="atm-controls">
+    <button class="btn btn-secondary" id="cancelBtn" onclick="cancelAction()">CANCEL</button>
+    <button class="btn btn-primary" id="actionBtn" onclick="handleAction()">INSERT CARD</button>
+  </div>
+
+  <!-- Card slot display -->
+  <div class="card-slot-area">
+    <div class="card-slot"></div>
+    <div class="card-slot-label">
+      INSERT CARD HERE<br>
+      <span style="color:#2a4060">CHIP FACING UP ▶</span>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = '';   // same origin
+let sessionId = null;
+let currentStep = 'card';
+let txType = null;
+let mediaRecorder = null;
+let audioChunks = [];
+let pollInterval = null;
+let pollStart = null;
+let recordingTimeout = null;
+let voiceRecorder = null;
+
+// Clock
+setInterval(() => {
+  document.getElementById('clockDisplay').textContent = new Date().toLocaleTimeString('en-GB');
+}, 1000);
+document.getElementById('clockDisplay').textContent = new Date().toLocaleTimeString('en-GB');
+
+// Card number formatting
+document.getElementById('cardNumber').addEventListener('input', function(e) {
+  let v = e.target.value.replace(/\D/g, '').substring(0, 16);
+  e.target.value = v.replace(/(.{4})/g, '$1 ').trim();
+});
+
+function showStep(name) {
+  document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+  document.getElementById('step-' + name).classList.add('active');
+  currentStep = name;
+}
+
+function updateDots(active) {
+  for (let i = 0; i <= 4; i++) {
+    const d = document.getElementById('dot' + i);
+    d.classList.remove('active', 'done');
+    if (i < active) d.classList.add('done');
+    if (i === active) d.classList.add('active');
+  }
+}
+
+function setBtn(label, enabled = true) {
+  const b = document.getElementById('actionBtn');
+  b.textContent = label;
+  b.disabled = !enabled;
+}
+
+function toast(msg, isError = false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.borderColor = isError ? 'var(--red)' : 'var(--green-dim)';
+  t.style.color = isError ? 'var(--red)' : 'var(--green)';
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+async function handleAction() {
+  if (currentStep === 'card')   await handleCardInsert();
+  else if (currentStep === 'voice') await startVoiceRecord();
+  else if (currentStep === 'amount') await submitAmount();
+  else if (currentStep === 'receipt') resetATM();
+}
+
+// ── STEP 1: Card + PIN ────────────────────────────────────
+async function handleCardInsert() {
+  const card = document.getElementById('cardNumber').value.replace(/\s/g, '');
+  const pin  = document.getElementById('pinInput').value;
+  if (!card || card.length < 13) return toast('Enter valid card number', true);
+  if (!pin || pin.length < 4)   return toast('Enter PIN', true);
+
+  setBtn('PROCESSING...', false);
+  try {
+    const res = await fetch(`${API}/atm/insert-card`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ card_number: card, pin })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Card rejected');
+    sessionId = data.session_id;
+    updateDots(1);
+    if (data.stage === 'voice_verified') {
+      toast('PIN verified. Sending face verification link...');
+      await sendSmsLink('Check your phone for face verification');
+      return;
+    }
+    showStep('voice');
+    setBtn('🔴 RECORD', true);
+    toast('Card accepted. Voice verification required.');
+  } catch (e) {
+    toast(e.message, true);
+    setBtn('INSERT CARD');
+  }
+}
+
+// ── STEP 2: Voice Recording ───────────────────────────────
+async function startVoiceRecord() {
+  const viz = document.getElementById('voiceViz');
+  const msg = document.getElementById('voiceMsg');
+  const prog = document.getElementById('voiceProgress');
+
+  if (voiceRecorder) return;
+
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    voiceRecorder = await createWavRecorder(stream);
+
+    const stopRecording = async () => {
+      if (!voiceRecorder) return;
+      const recorder = voiceRecorder;
+      voiceRecorder = null;
+      stream.getTracks().forEach(t => t.stop());
+      viz.classList.remove('recording');
+      msg.textContent = 'PROCESSING VOICE...';
+      setBtn('PROCESSING...', false);
+      document.getElementById('actionBtn').onclick = handleAction;
+
+      const blob = await recorder.stop();
+      await submitVoice(blob);
+    };
+
+    viz.classList.add('recording');
+    msg.textContent = 'RECORDING... SPEAK NOW';
+    setBtn('⏹ STOP', true);
+
+    // Auto-stop after 5 seconds with progress
+    let elapsed = 0;
+    const timer = setInterval(() => {
+      elapsed += 100;
+      prog.style.width = (elapsed / 5000 * 100) + '%';
+      if (elapsed >= 5000) {
+        clearInterval(timer);
+        stopRecording();
+      }
+    }, 100);
+
+    // Allow manual stop
+    document.getElementById('actionBtn').onclick = () => {
+      clearInterval(timer);
+      stopRecording();
+    };
+
+  } catch (e) {
+    toast('Microphone access denied. Please allow microphone.', true);
+    setBtn('🔴 RECORD', true);
+    voiceRecorder = null;
+  }
+}
+
+async function submitVoice(blob) {
+  const form = new FormData();
+  form.append('session_id', sessionId);
+  form.append('audio', blob, 'voice.wav');
+
+  try {
+    const res = await fetch(`${API}/atm/verify-voice`, { method: 'POST', body: form });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Voice not recognized');
+
+    await sendSmsLink('Voice verified ✓ Check your phone');
+  } catch (e) {
+    toast(e.message, true);
+    showStep('voice');
+    setBtn('🔴 RECORD', true);
+    document.getElementById('voiceMsg').textContent = 'VOICE NOT RECOGNIZED. TRY AGAIN.';
+    document.getElementById('actionBtn').onclick = handleAction;
+  }
+}
+
+async function createWavRecorder(stream) {
+  const AudioCtx = window.AudioContext || window.webkitAudioContext;
+  const audioContext = new AudioCtx();
+  const source = audioContext.createMediaStreamSource(stream);
+  const processor = audioContext.createScriptProcessor(4096, 1, 1);
+  const silentGain = audioContext.createGain();
+  const chunks = [];
+  const sampleRate = audioContext.sampleRate;
+  silentGain.gain.value = 0;
+
+  processor.onaudioprocess = (event) => {
+    chunks.push(new Float32Array(event.inputBuffer.getChannelData(0)));
+  };
+
+  source.connect(processor);
+  processor.connect(silentGain);
+  silentGain.connect(audioContext.destination);
+
+  return {
+    async stop() {
+      processor.disconnect();
+      silentGain.disconnect();
+      source.disconnect();
+      await audioContext.close();
+      return encodeWav(chunks, sampleRate);
+    }
+  };
+}
+
+function encodeWav(chunks, sampleRate) {
+  const length = chunks.reduce((total, chunk) => total + chunk.length, 0);
+  const pcm = new Float32Array(length);
+  let offset = 0;
+  chunks.forEach((chunk) => {
+    pcm.set(chunk, offset);
+    offset += chunk.length;
+  });
+
+  const buffer = new ArrayBuffer(44 + pcm.length * 2);
+  const view = new DataView(buffer);
+  writeAscii(view, 0, 'RIFF');
+  view.setUint32(4, 36 + pcm.length * 2, true);
+  writeAscii(view, 8, 'WAVE');
+  writeAscii(view, 12, 'fmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, 1, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * 2, true);
+  view.setUint16(32, 2, true);
+  view.setUint16(34, 16, true);
+  writeAscii(view, 36, 'data');
+  view.setUint32(40, pcm.length * 2, true);
+
+  let byteOffset = 44;
+  for (let i = 0; i < pcm.length; i++) {
+    const sample = Math.max(-1, Math.min(1, pcm[i]));
+    view.setInt16(byteOffset, sample < 0 ? sample * 0x8000 : sample * 0x7fff, true);
+    byteOffset += 2;
+  }
+
+  return new Blob([buffer], { type: 'audio/wav' });
+}
+
+function writeAscii(view, offset, text) {
+  for (let i = 0; i < text.length; i++) {
+    view.setUint8(offset + i, text.charCodeAt(i));
+  }
+}
+
+async function sendSmsLink(successMessage) {
+  const smsForm = new FormData();
+  smsForm.append('session_id', sessionId);
+  const smsRes = await fetch(`${API}/atm/send-sms`, { method: 'POST', body: smsForm });
+  const smsData = await smsRes.json();
+  if (!smsRes.ok) throw new Error(smsData.detail || 'SMS send failed');
+
+  updateDots(2);
+  showStep('sms');
+  const phoneEl = document.getElementById('phoneMasked');
+  phoneEl.textContent = smsData.phone_masked;
+  const facePanel = document.getElementById('faceLinkPanel');
+  const faceLink = document.getElementById('faceAuthLink');
+  const faceQr = document.getElementById('faceQr');
+  facePanel.classList.remove('show');
+  if (smsData.auth_url) {
+    faceLink.href = smsData.auth_url;
+    if (smsData.qr_code_data_url) {
+      faceQr.src = smsData.qr_code_data_url;
+      faceQr.style.display = 'block';
+    } else {
+      faceQr.style.display = 'none';
+    }
+    facePanel.classList.add('show');
+    document.getElementById('pollMsg').textContent =
+      'CHECK SMS, OR SCAN THE QR CODE WITH YOUR PHONE CAMERA...';
+  }
+  setBtn('WAITING...', false);
+  startPolling();
+  toast(successMessage);
+}
+
+// ── STEP 3: Poll for face auth ────────────────────────────
+function startPolling() {
+  pollStart = Date.now();
+  const TIMEOUT_MS = 10 * 60 * 1000;   // 10 min
+  const prog = document.getElementById('pollProgress');
+  const pollMsg = document.getElementById('pollMsg');
+
+  pollInterval = setInterval(async () => {
+    const elapsed = Date.now() - pollStart;
+    prog.style.width = Math.min(elapsed / TIMEOUT_MS * 100, 99) + '%';
+
+    try {
+      const res = await fetch(`${API}/atm/session/${sessionId}`);
+      const data = await res.json();
+
+      if (data.stage === 'authenticated') {
+        clearInterval(pollInterval);
+        updateDots(3);
+        showStep('auth');
+        document.getElementById('welcomeMsg').textContent =
+          `WELCOME, ${(data.user_name || 'USER').toUpperCase()}`;
+        setBtn('DONE', true);
+        toast('Face verified ✓ You are authenticated!');
+      } else if (data.stage === 'expired' || data.stage === 'failed') {
+        clearInterval(pollInterval);
+        toast('Session expired. Please restart.', true);
+        resetATM();
+      }
+    } catch(e) {
+      pollMsg.textContent = 'CONNECTION ERROR. RETRYING...';
+    }
+  }, 3000);
+}
+
+// ── STEP 4: Transactions ──────────────────────────────────
+async function doTransaction(type) {
+  txType = type;
+  if (type === 'balance_inquiry') {
+    await submitTransaction(type, null, null);
+    return;
+  }
+}
+
+function showWithdraw() {
+  txType = 'withdrawal';
+  document.getElementById('amountIcon').textContent = '💸';
+  document.getElementById('amountLabel').textContent = 'ENTER WITHDRAWAL AMOUNT';
+  document.getElementById('recipientGroup').style.display = 'none';
+  updateDots(4);
+  showStep('amount');
+  setBtn('CONFIRM', true);
+}
+function showDeposit() {
+  txType = 'deposit';
+  document.getElementById('amountIcon').textContent = '📥';
+  document.getElementById('amountLabel').textContent = 'ENTER DEPOSIT AMOUNT';
+  document.getElementById('recipientGroup').style.display = 'none';
+  updateDots(4);
+  showStep('amount');
+  setBtn('CONFIRM', true);
+}
+function showTransfer() {
+  txType = 'transfer';
+  document.getElementById('amountIcon').textContent = '🔄';
+  document.getElementById('amountLabel').textContent = 'ENTER TRANSFER AMOUNT';
+  document.getElementById('recipientGroup').style.display = 'flex';
+  updateDots(4);
+  showStep('amount');
+  setBtn('CONFIRM', true);
+}
+
+async function submitAmount() {
+  const amount = parseFloat(document.getElementById('amountInput').value);
+  const recipient = document.getElementById('recipientInput').value.trim();
+  if (!amount || amount < 100) return toast('Enter valid amount (min ₦100)', true);
+  if (txType === 'transfer' && !recipient) return toast('Enter recipient account', true);
+  await submitTransaction(txType, amount, recipient || null);
+}
+
+async function submitTransaction(type, amount, recipient) {
+  setBtn('PROCESSING...', false);
+  try {
+    const res = await fetch(`${API}/transactions/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        session_id: sessionId,
+        type,
+        amount,
+        recipient_account: recipient,
+      })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Transaction failed');
+
+    // Build receipt
+    showReceipt(data, type);
+  } catch(e) {
+    toast(e.message, true);
+    setBtn('CONFIRM', true);
+    showStep(type === 'balance_inquiry' ? 'auth' : 'amount');
+  }
+}
+
+function showReceipt(data, type) {
+  const now = new Date();
+  const typeLabels = {
+    withdrawal: 'WITHDRAWAL', deposit: 'DEPOSIT',
+    transfer: 'TRANSFER', balance_inquiry: 'BALANCE INQUIRY'
+  };
+  let lines = `
+    <div class="rx-line"><span>SECUREBANK ATM</span><span>${now.toLocaleDateString()}</span></div>
+    <div class="rx-line"><span>TIME</span><span>${now.toLocaleTimeString()}</span></div>
+    <div class="rx-divider"></div>
+    <div class="rx-line"><span>TYPE</span><span>${typeLabels[type]}</span></div>`;
+  if (data.amount)
+    lines += `<div class="rx-line"><span>AMOUNT</span><span>₦${data.amount.toLocaleString('en-NG', {minimumFractionDigits:2})}</span></div>`;
+  if (data.balance_after != null)
+    lines += `<div class="rx-line"><span>BALANCE</span><span>₦${data.balance_after.toLocaleString('en-NG', {minimumFractionDigits:2})}</span></div>`;
+  lines += `
+    <div class="rx-divider"></div>
+    <div class="rx-line rx-success"><span>STATUS</span><span>✓ ${data.status.toUpperCase()}</span></div>
+    <div class="rx-line" style="color:var(--green-dim);font-size:0.6rem;justify-content:center;margin-top:6px">
+      <span>REF: ${data.transaction_id?.slice(-8).toUpperCase()}</span>
+    </div>`;
+
+  document.getElementById('receiptContent').innerHTML = lines;
+  showStep('receipt');
+  setBtn('NEW TRANSACTION', true);
+  toast('Transaction complete ✓');
+}
+
+// ── Cancel / Reset ────────────────────────────────────────
+function cancelAction() {
+  if (currentStep === 'amount') {
+    showStep('auth'); setBtn('DONE', true); return;
+  }
+  resetATM();
+}
+
+function resetATM() {
+  if (pollInterval) clearInterval(pollInterval);
+  sessionId = null; txType = null;
+  document.getElementById('cardNumber').value = '';
+  document.getElementById('pinInput').value = '';
+  document.getElementById('amountInput').value = '';
+  document.getElementById('recipientInput').value = '';
+  document.getElementById('voiceMsg').textContent = 'PRESS RECORD AND SPEAK YOUR PASSPHRASE CLEARLY';
+  document.getElementById('voiceProgress').style.width = '0%';
+  document.getElementById('pollProgress').style.width = '0%';
+  document.getElementById('actionBtn').onclick = handleAction;
+  updateDots(0);
+  showStep('card');
+  setBtn('INSERT CARD', true);
+  toast('Session ended');
+}
+</script>
+</body>
+</html>

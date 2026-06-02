@@ -1,0 +1,14 @@
+.venv
+__pycache__
+*.pyc
+.pytest_cache
+*.log
+cloudflared-tunnel*.log
+uvicorn-dev*.log
+
+# Local secrets and machine-specific config
+backend/.env
+
+# Local caches/model downloads
+.cache
+speechbrain_models

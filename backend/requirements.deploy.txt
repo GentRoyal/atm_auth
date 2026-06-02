@@ -1,0 +1,33 @@
+fastapi==0.111.0
+uvicorn[standard]==0.29.0
+python-dotenv==1.0.1
+asyncpg
+databases[asyncpg]
+sqlalchemy==2.0.30
+psycopg[binary,pool]
+bcrypt==4.1.3
+passlib[bcrypt]==1.7.4
+python-jose[cryptography]==3.3.0
+pydantic
+pydantic-settings
+
+# Lightweight biometric fallback stack for free Docker hosts.
+# Voice uses librosa MFCC fallback when SpeechBrain/Torch is not installed.
+# Face uses OpenCV fallback when face_recognition/dlib is not installed.
+numpy==1.26.4
+opencv-python-headless==4.9.0.80
+Pillow
+scipy
+soundfile
+librosa
+
+# HTTP / SMS
+httpx
+africastalking
+twilio
+
+# Utils
+python-multipart
+aiofiles
+pyotp
+qrcode
