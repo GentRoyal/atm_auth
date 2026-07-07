@@ -225,6 +225,55 @@ class TestSMSService:
         )
         assert result is True
 
+    @pytest.mark.asyncio
+    async def test_send_auth_link_termii_mode(self, monkeypatch):
+        from backend.services import sms_service
+
+        class FakeResponse:
+            def raise_for_status(self):
+                return None
+
+            def json(self):
+                return {"message_id": "msg-123", "message": "Successfully Sent"}
+
+        class FakeAsyncClient:
+            def __init__(self, *args, **kwargs):
+                self.args = args
+                self.kwargs = kwargs
+
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, exc_type, exc, tb):
+                return False
+
+            async def post(self, url, json):
+                assert url == "https://api.ng.termii.com/api/sms/send"
+                assert json["to"] == "2348012345678"
+                assert json["from"] == "SecureBank"
+                assert json["channel"] == "generic"
+                assert json["type"] == "plain"
+                assert "SecureBank ATM face verification" in json["sms"]
+                assert json["api_key"] == "test-key"
+                return FakeResponse()
+
+        import httpx
+
+        monkeypatch.setattr(httpx, "AsyncClient", FakeAsyncClient)
+        monkeypatch.setattr(sms_service.settings, "SMS_PROVIDER", "termii")
+        monkeypatch.setattr(sms_service.settings, "TERMII_API_KEY", "test-key")
+        monkeypatch.setattr(sms_service.settings, "TERMII_SENDER_ID", "SecureBank")
+        monkeypatch.setattr(sms_service.settings, "TERMII_CHANNEL", "generic")
+        monkeypatch.setattr(sms_service.settings, "TERMII_BASE_URL", "https://api.ng.termii.com")
+
+        result = await sms_service.send_auth_link(
+            "+2348012345678",
+            "http://localhost:8000/mobile/face-auth?token=abc",
+            "Ada Okonkwo",
+        )
+
+        assert result is True
+
 
 # ── Schema Validation Tests ───────────────────────────────
 

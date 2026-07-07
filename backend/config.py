@@ -29,6 +29,10 @@ class Settings(BaseSettings):
     TWILIO_ACCOUNT_SID: str = ""
     TWILIO_AUTH_TOKEN: str = ""
     TWILIO_FROM_NUMBER: str = ""
+    TERMII_API_KEY: str = ""
+    TERMII_SENDER_ID: str = ""
+    TERMII_CHANNEL: str = "generic"
+    TERMII_BASE_URL: str = "https://api.ng.termii.com"
 
     # URLs
     BASE_URL: str = "http://localhost:8000"

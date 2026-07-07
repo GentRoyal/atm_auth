@@ -34,6 +34,8 @@ async def send_auth_link(phone_number: str, auth_url: str, user_name: str) -> bo
         return True
     if provider == "twilio":
         return await _send_via_twilio(phone_number, message)
+    if provider == "termii":
+        return await _send_via_termii(phone_number, message)
 
     logger.error("Unsupported SMS_PROVIDER=%s", settings.SMS_PROVIDER)
     return False
@@ -55,6 +57,44 @@ async def _send_via_twilio(phone: str, message: str) -> bool:
         return msg.status in ("queued", "sent", "delivered")
     except Exception as e:
         logger.error(f"Twilio send failed: {e}")
+        return False
+
+
+def _format_termii_phone(phone: str) -> str:
+    return phone.strip().replace(" ", "").replace("-", "").lstrip("+")
+
+
+async def _send_via_termii(phone: str, message: str) -> bool:
+    try:
+        if not all((settings.TERMII_API_KEY, settings.TERMII_SENDER_ID)):
+            logger.error("Termii credentials are not configured.")
+            return False
+
+        import httpx
+
+        base_url = settings.TERMII_BASE_URL.rstrip("/")
+        payload = {
+            "to": _format_termii_phone(phone),
+            "from": settings.TERMII_SENDER_ID,
+            "sms": message,
+            "type": "plain",
+            "channel": settings.TERMII_CHANNEL,
+            "api_key": settings.TERMII_API_KEY,
+        }
+
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            response = await client.post(f"{base_url}/api/sms/send", json=payload)
+            response.raise_for_status()
+
+        try:
+            data = response.json()
+        except ValueError:
+            data = {}
+
+        logger.info("Termii SMS accepted for %s: %s", _mask_phone(phone), data)
+        return True
+    except Exception as e:
+        logger.error(f"Termii send failed: {e}")
         return False
 
 
