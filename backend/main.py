@@ -90,6 +90,14 @@ async def serve_atm():
     return HTMLResponse("<h2>ATM frontend not found</h2>", status_code=404, headers=NO_STORE_HEADERS)
 
 
+@app.get("/register", response_class=HTMLResponse, include_in_schema=False)
+async def serve_register():
+    html_path = Path(__file__).parent.parent / "frontend" / "register" / "index.html"
+    if html_path.exists():
+        return HTMLResponse(html_path.read_text(encoding="utf-8"), headers=NO_STORE_HEADERS)
+    return HTMLResponse("<h2>Registration frontend not found</h2>", status_code=404, headers=NO_STORE_HEADERS)
+
+
 @app.get("/config.js", include_in_schema=False)
 async def frontend_config():
     return Response(

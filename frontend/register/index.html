@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SecureBank Registration</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Exo+2:wght@300;400;600;700&display=swap');
+
+  :root {
+    --bg: #07111f;
+    --panel: #0d1b2d;
+    --panel-2: #10243a;
+    --line: #1c466a;
+    --green: #00d67a;
+    --green-bright: #00ff99;
+    --amber: #ffb84d;
+    --red: #ff4f5e;
+    --text: #d9f7e8;
+    --muted: #7fa7b7;
+    --mono: 'Share Tech Mono', monospace;
+    --ui: 'Exo 2', sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    background:
+      radial-gradient(circle at 50% 0%, rgba(0, 214, 122, 0.16), transparent 34%),
+      linear-gradient(160deg, #07111f 0%, #0a1626 52%, #050a12 100%);
+    color: var(--text);
+    font-family: var(--ui);
+    padding: 24px;
+  }
+
+  .shell {
+    width: min(920px, 100%);
+    display: grid;
+    grid-template-columns: 1fr 0.8fr;
+    gap: 18px;
+    align-items: stretch;
+  }
+
+  .panel {
+    background: linear-gradient(180deg, rgba(16,36,58,0.96), rgba(9,20,34,0.98));
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    box-shadow: 0 26px 80px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.04);
+    padding: 24px;
+  }
+
+  .brand {
+    font-family: var(--mono);
+    color: var(--green-bright);
+    letter-spacing: 3px;
+    font-size: 1.1rem;
+    margin-bottom: 6px;
+    text-shadow: 0 0 18px rgba(0,255,153,0.3);
+  }
+
+  h1 {
+    margin: 0 0 18px;
+    font-size: 1.5rem;
+    letter-spacing: 0;
+  }
+
+  form {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+
+  label {
+    display: grid;
+    gap: 6px;
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    letter-spacing: 1px;
+  }
+
+  label.full { grid-column: 1 / -1; }
+
+  input {
+    width: 100%;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    background: rgba(0, 12, 22, 0.72);
+    color: var(--green-bright);
+    font-family: var(--mono);
+    font-size: 0.92rem;
+    padding: 11px 12px;
+    outline: none;
+  }
+
+  input:focus {
+    border-color: var(--green);
+    box-shadow: 0 0 0 2px rgba(0,214,122,0.14);
+  }
+
+  input[type="file"] {
+    color: var(--text);
+    padding: 10px;
+  }
+
+  .actions {
+    grid-column: 1 / -1;
+    display: flex;
+    gap: 10px;
+    margin-top: 4px;
+  }
+
+  button, .link-button {
+    border: 0;
+    border-radius: 8px;
+    padding: 12px 14px;
+    cursor: pointer;
+    font-family: var(--mono);
+    letter-spacing: 1.5px;
+    font-size: 0.78rem;
+    text-decoration: none;
+    text-align: center;
+  }
+
+  button {
+    flex: 1;
+    background: linear-gradient(135deg, #008f50, #00c875);
+    color: white;
+    box-shadow: 0 12px 28px rgba(0, 200, 117, 0.22);
+  }
+
+  button:disabled {
+    opacity: 0.55;
+    cursor: wait;
+  }
+
+  .link-button {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--line);
+    color: var(--text);
+  }
+
+  .status {
+    margin-top: 16px;
+    min-height: 42px;
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(127,167,183,0.25);
+    background: rgba(0,0,0,0.18);
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 0.76rem;
+    line-height: 1.5;
+    white-space: pre-wrap;
+  }
+
+  .status.success { color: var(--green-bright); border-color: rgba(0,214,122,0.45); }
+  .status.error { color: var(--red); border-color: rgba(255,79,94,0.55); }
+
+  .receipt {
+    display: grid;
+    gap: 12px;
+  }
+
+  .receipt-title {
+    font-family: var(--mono);
+    color: var(--amber);
+    letter-spacing: 2px;
+    font-size: 0.85rem;
+  }
+
+  .credential {
+    padding: 12px;
+    border: 1px solid rgba(0,214,122,0.32);
+    border-radius: 8px;
+    background: rgba(0, 214, 122, 0.06);
+  }
+
+  .credential span {
+    display: block;
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    letter-spacing: 1px;
+    margin-bottom: 5px;
+  }
+
+  .credential strong {
+    display: block;
+    color: var(--green-bright);
+    font-family: var(--mono);
+    font-size: 1rem;
+    word-break: break-all;
+  }
+
+  .note {
+    color: var(--muted);
+    font-size: 0.85rem;
+    line-height: 1.6;
+    margin: 0;
+  }
+
+  @media (max-width: 780px) {
+    .shell { grid-template-columns: 1fr; }
+    form { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+  <main class="shell">
+    <section class="panel">
+      <div class="brand">SECUREBANK</div>
+      <h1>Create Test Account</h1>
+
+      <form id="registerForm">
+        <label>
+          FULL NAME
+          <input id="fullName" name="full_name" autocomplete="name" required placeholder="Ada Okonkwo">
+        </label>
+
+        <label>
+          PHONE NUMBER
+          <input id="phoneNumber" name="phone_number" autocomplete="tel" required placeholder="+2348012345678">
+        </label>
+
+        <label>
+          CARD NUMBER
+          <input id="cardNumber" name="card_number" inputmode="numeric" required>
+        </label>
+
+        <label>
+          ACCOUNT NUMBER
+          <input id="accountNumber" name="account_number" inputmode="numeric" required>
+        </label>
+
+        <label>
+          PIN
+          <input id="pin" name="pin" type="password" inputmode="numeric" minlength="4" maxlength="6" required placeholder="1234">
+        </label>
+
+        <label>
+          CONFIRM PIN
+          <input id="pinConfirm" type="password" inputmode="numeric" minlength="4" maxlength="6" required placeholder="1234">
+        </label>
+
+        <label class="full">
+          FACE PHOTO
+          <input id="faceImages" name="images" type="file" accept="image/png,image/jpeg,image/webp" multiple required>
+        </label>
+
+        <div class="actions">
+          <button id="submitBtn" type="submit">CREATE ACCOUNT</button>
+          <a class="link-button" href="/atm">OPEN ATM</a>
+        </div>
+      </form>
+
+      <div id="status" class="status">Ready.</div>
+    </section>
+
+    <aside class="panel receipt">
+      <div class="receipt-title">TEST CREDENTIALS</div>
+      <div class="credential">
+        <span>CARD NUMBER</span>
+        <strong id="cardOut">-</strong>
+      </div>
+      <div class="credential">
+        <span>PIN</span>
+        <strong id="pinOut">-</strong>
+      </div>
+      <div class="credential">
+        <span>ACCOUNT NUMBER</span>
+        <strong id="accountOut">-</strong>
+      </div>
+      <p class="note">After registration, use the card number and PIN on the ATM screen. Face verification uses the photo uploaded here.</p>
+    </aside>
+  </main>
+
+<script>
+const API = '';
+
+function digits(length) {
+  let value = '';
+  const bytes = new Uint8Array(length);
+  crypto.getRandomValues(bytes);
+  for (const byte of bytes) value += String(byte % 10);
+  return value;
+}
+
+function generateCredentials() {
+  const card = `4111${digits(12)}`;
+  const account = `10${digits(8)}`;
+  document.getElementById('cardNumber').value = card;
+  document.getElementById('accountNumber').value = account;
+  syncReceipt();
+}
+
+function setStatus(message, type = '') {
+  const status = document.getElementById('status');
+  status.className = `status ${type}`;
+  status.textContent = message;
+}
+
+function syncReceipt() {
+  document.getElementById('cardOut').textContent = document.getElementById('cardNumber').value || '-';
+  document.getElementById('pinOut').textContent = document.getElementById('pin').value || '-';
+  document.getElementById('accountOut').textContent = document.getElementById('accountNumber').value || '-';
+}
+
+async function readApiResponse(res, fallbackMessage) {
+  const text = await res.text();
+  let data = {};
+  if (text) {
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = { detail: text };
+    }
+  }
+  if (!res.ok) throw new Error(data.detail || fallbackMessage || `Request failed (${res.status})`);
+  return data;
+}
+
+document.querySelectorAll('input').forEach((input) => input.addEventListener('input', syncReceipt));
+generateCredentials();
+
+document.getElementById('registerForm').addEventListener('submit', async (event) => {
+  event.preventDefault();
+
+  const submitBtn = document.getElementById('submitBtn');
+  const pin = document.getElementById('pin').value.trim();
+  const pinConfirm = document.getElementById('pinConfirm').value.trim();
+  const faceFiles = document.getElementById('faceImages').files;
+
+  if (!/^\d{4,6}$/.test(pin)) {
+    setStatus('PIN must be 4 to 6 digits.', 'error');
+    return;
+  }
+  if (pin !== pinConfirm) {
+    setStatus('PIN confirmation does not match.', 'error');
+    return;
+  }
+  if (!faceFiles.length) {
+    setStatus('Upload at least one clear face photo.', 'error');
+    return;
+  }
+
+  submitBtn.disabled = true;
+  setStatus('Creating user...');
+
+  try {
+    const payload = {
+      full_name: document.getElementById('fullName').value.trim(),
+      phone_number: document.getElementById('phoneNumber').value.trim(),
+      card_number: document.getElementById('cardNumber').value.replace(/\D/g, ''),
+      account_number: document.getElementById('accountNumber').value.replace(/\D/g, ''),
+      pin,
+    };
+
+    const userRes = await fetch(`${API}/enroll/user`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const userData = await readApiResponse(userRes, 'Could not create user.');
+
+    setStatus('User created. Enrolling face...');
+
+    const faceForm = new FormData();
+    Array.from(faceFiles).forEach((file) => faceForm.append('images', file));
+    const faceRes = await fetch(`${API}/enroll/face/${userData.user_id}`, {
+      method: 'POST',
+      body: faceForm,
+    });
+    const faceData = await readApiResponse(faceRes, 'Could not enroll face.');
+
+    setStatus(
+      `Account ready.\nUser ID: ${userData.user_id}\nFace images accepted: ${faceData.valid_images}/${faceData.images_received}`,
+      'success'
+    );
+  } catch (error) {
+    setStatus(error.message || 'Registration failed.', 'error');
+  } finally {
+    submitBtn.disabled = false;
+    syncReceipt();
+  }
+});
+</script>
+</body>
+</html>

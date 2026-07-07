@@ -22,6 +22,7 @@ fs.mkdirSync(dist, { recursive: true });
 
 copyDir(path.join(root, 'atm'), path.join(dist, 'atm'));
 copyDir(path.join(root, 'mobile'), path.join(dist, 'mobile'));
+copyDir(path.join(root, 'register'), path.join(dist, 'register'));
 
 const apiBase = (
   process.env.VITE_API_BASE_URL ||
