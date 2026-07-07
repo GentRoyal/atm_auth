@@ -21,6 +21,7 @@ If you use the transaction pooler instead, append:
 ## 2. Render Backend
 
 Create a Render Web Service from this repository. Use the included `Dockerfile`, or create it from `render.yaml`.
+For a native Python service, keep the repo-root `runtime.txt` file so Render uses Python 3.11 instead of a newer runtime that may not be compatible with pinned dependencies.
 
 Set these Render environment variables:
 
