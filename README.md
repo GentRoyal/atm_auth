@@ -31,6 +31,24 @@ Run the app from the project root:
 
 Open the ATM UI at `http://localhost:8000/atm`.
 
+## Database Provider
+
+Supabase is the default database provider. Configure `backend\.env` with your Supabase Postgres URL:
+
+```env
+DATABASE_PROVIDER=supabase
+SUPABASE_DATABASE_URL=postgresql://postgres.PROJECT_REF:PASSWORD@aws-0-REGION.pooler.supabase.com:5432/postgres?ssl=true
+```
+
+To switch to local or self-hosted PostgreSQL:
+
+```env
+DATABASE_PROVIDER=postgresql
+POSTGRES_DATABASE_URL=postgresql://postgres:password@localhost:5432/atm_auth_system
+```
+
+`DATABASE_URL` is still supported as a fallback when the selected provider-specific URL is empty.
+
 ## Deploying
 
 For a fast demo with real SMS links, use Cloudflare Tunnel + Supabase Postgres. See `CLOUDFLARE_SUPABASE.md`.

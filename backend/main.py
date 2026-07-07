@@ -12,7 +12,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, RedirectResponse
 
 from backend.config import settings
-from backend.database import connect_db, disconnect_db
+from backend.database import connect_db, disconnect_db, database
 from backend.routers import atm, mobile, transactions, enrollment
 
 # ── Logging ───────────────────────────────────────────────
@@ -29,11 +29,19 @@ NO_STORE_HEADERS = {"Cache-Control": "no-store, max-age=0"}
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Connecting to database...")
-    await connect_db()
-    logger.info("Database connected.")
+    app.state.db_connected = False
+    app.state.db_error = None
+    try:
+        await connect_db()
+        app.state.db_connected = True
+        logger.info("Database connected.")
+    except Exception as exc:
+        app.state.db_error = str(exc)
+        logger.error("Database connection failed during startup: %s", exc)
     yield
-    await disconnect_db()
-    logger.info("Database disconnected.")
+    if database.is_connected:
+        await disconnect_db()
+        logger.info("Database disconnected.")
 
 
 # ── App ───────────────────────────────────────────────────
@@ -96,4 +104,21 @@ async def serve_face_verify(token: str):
 
 @app.get("/health")
 async def health():
-    return {"status": "ok", "version": "1.0.0"}
+    return {
+        "status": "ok",
+        "version": "1.0.0",
+        "database_connected": database.is_connected,
+    }
+
+
+@app.get("/diagnostics")
+async def diagnostics():
+    return {
+        "status": "ok",
+        "database_connected": database.is_connected,
+        "database_error": getattr(app.state, "db_error", None),
+        "public_base_url_configured": bool(settings.PUBLIC_BASE_URL),
+        "sms_provider": settings.SMS_PROVIDER,
+        "voice_auth_enabled": settings.ENABLE_VOICE_AUTH,
+        "cors_origins": settings.cors_origins_list,
+    }

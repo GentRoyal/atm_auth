@@ -31,13 +31,15 @@ Then copy the **Session pooler** connection string from Supabase **Connect**.
 Use this format in `backend/.env`:
 
 ```env
-DATABASE_URL=postgresql://postgres.PROJECT_REF:PASSWORD@aws-0-REGION.pooler.supabase.com:5432/postgres?ssl=true
+DATABASE_PROVIDER=supabase
+SUPABASE_DATABASE_URL=postgresql://postgres.PROJECT_REF:PASSWORD@aws-0-REGION.pooler.supabase.com:5432/postgres?ssl=true
 ```
 
 If you use the transaction pooler instead, use:
 
 ```env
-DATABASE_URL=postgresql://postgres.PROJECT_REF:PASSWORD@aws-0-REGION.pooler.supabase.com:6543/postgres?ssl=true&statement_cache_size=0
+DATABASE_PROVIDER=supabase
+SUPABASE_DATABASE_URL=postgresql://postgres.PROJECT_REF:PASSWORD@aws-0-REGION.pooler.supabase.com:6543/postgres?ssl=true&statement_cache_size=0
 ```
 
 ## 2. Start the Backend

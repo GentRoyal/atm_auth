@@ -28,7 +28,7 @@ def _with_query_options(url: str, updates: dict[str, str | None]) -> str:
 
 
 def _async_database_url() -> str:
-    url = settings.DATABASE_URL
+    url = settings.active_database_url
     options = _query_options(url)
     sslmode = options.get("sslmode")
     if sslmode and "ssl" not in options:
@@ -37,7 +37,7 @@ def _async_database_url() -> str:
 
 
 def _database_options() -> dict:
-    options = _query_options(settings.DATABASE_URL)
+    options = _query_options(settings.active_database_url)
     database_options = {}
     if "statement_cache_size" in options:
         database_options["statement_cache_size"] = int(options["statement_cache_size"])
@@ -49,7 +49,7 @@ database = databases.Database(_async_database_url(), **_database_options())
 
 # ── Sync engine (for migrations / startup) ───────────────
 def _sync_database_url() -> str:
-    url = settings.DATABASE_URL_SYNC or settings.DATABASE_URL
+    url = settings.active_database_url_sync or settings.active_database_url
     options = _query_options(url)
     if options.get("ssl") == "true" and "sslmode" not in options:
         url = _with_query_options(url, {"ssl": None, "sslmode": "require"})
@@ -60,9 +60,22 @@ def _sync_database_url() -> str:
     return url
 
 
-sync_engine = sqlalchemy.create_engine(
-    _sync_database_url()
-)
+_sync_engine = None
+
+
+def get_sync_engine():
+    """
+    Create the sync SQLAlchemy engine only when explicitly needed.
+    Vercel/serverless runtime uses the async database path and may not install
+    sync-only drivers such as psycopg.
+    """
+    global _sync_engine
+    if _sync_engine is None:
+        _sync_engine = sqlalchemy.create_engine(_sync_database_url())
+    return _sync_engine
+
+
+sync_engine = None
 
 metadata = MetaData()
 

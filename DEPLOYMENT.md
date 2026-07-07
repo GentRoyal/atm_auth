@@ -57,7 +57,8 @@ If you use Supabase's **Transaction pooler** instead, append:
 6. Add these Space secrets:
 
 ```env
-DATABASE_URL=postgresql://postgres.PROJECT_REF:PASSWORD@aws-0-REGION.pooler.supabase.com:5432/postgres?ssl=true
+DATABASE_PROVIDER=supabase
+SUPABASE_DATABASE_URL=postgresql://postgres.PROJECT_REF:PASSWORD@aws-0-REGION.pooler.supabase.com:5432/postgres?ssl=true
 PUBLIC_BASE_URL=https://YOUR_SPACE_USERNAME-YOUR_SPACE_NAME.hf.space
 SMS_PROVIDER=twilio
 TWILIO_ACCOUNT_SID=your_twilio_sid

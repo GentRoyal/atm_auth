@@ -11,6 +11,11 @@ ENV_FILE = Path(__file__).with_name(".env")
 
 class Settings(BaseSettings):
     # Database
+    DATABASE_PROVIDER: str = "supabase"
+    SUPABASE_DATABASE_URL: str | None = None
+    SUPABASE_DATABASE_URL_SYNC: str | None = None
+    POSTGRES_DATABASE_URL: str | None = None
+    POSTGRES_DATABASE_URL_SYNC: str | None = None
     DATABASE_URL: str = "postgresql://postgres:postgres@localhost:5432/atm_auth_system"
     DATABASE_URL_SYNC: str | None = None
 
@@ -41,6 +46,45 @@ class Settings(BaseSettings):
 
     # CORS
     CORS_ORIGINS: str = "http://localhost:8000"
+
+    @property
+    def database_provider(self) -> str:
+        provider = self.DATABASE_PROVIDER.strip().lower()
+        aliases = {
+            "postgres": "postgresql",
+            "postgresql": "postgresql",
+            "local": "postgresql",
+            "supabase": "supabase",
+        }
+        if provider not in aliases:
+            allowed = ", ".join(sorted(set(aliases.values())))
+            raise ValueError(f"DATABASE_PROVIDER must be one of: {allowed}")
+        return aliases[provider]
+
+    @staticmethod
+    def _env_value(value: str | None) -> str | None:
+        if value is None:
+            return None
+        value = value.strip()
+        return value or None
+
+    @property
+    def active_database_url(self) -> str:
+        if self.database_provider == "supabase":
+            return self._env_value(self.SUPABASE_DATABASE_URL) or self.DATABASE_URL
+        return self._env_value(self.POSTGRES_DATABASE_URL) or self.DATABASE_URL
+
+    @property
+    def active_database_url_sync(self) -> str | None:
+        if self.database_provider == "supabase":
+            return (
+                self._env_value(self.SUPABASE_DATABASE_URL_SYNC)
+                or self._env_value(self.DATABASE_URL_SYNC)
+            )
+        return (
+            self._env_value(self.POSTGRES_DATABASE_URL_SYNC)
+            or self._env_value(self.DATABASE_URL_SYNC)
+        )
 
     @property
     def cors_origins_list(self) -> list[str]:
