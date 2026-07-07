@@ -26,8 +26,6 @@ class Settings(BaseSettings):
 
     # SMS
     SMS_PROVIDER: str = "dev"
-    AT_USERNAME: str = "sandbox"
-    AT_API_KEY: str = ""
     TWILIO_ACCOUNT_SID: str = ""
     TWILIO_AUTH_TOKEN: str = ""
     TWILIO_FROM_NUMBER: str = ""

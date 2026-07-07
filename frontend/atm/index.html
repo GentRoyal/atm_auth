@@ -613,8 +613,9 @@
   </div>
 </div>
 
+<script src="/config.js"></script>
 <script>
-const API = '';   // same origin
+const API = (window.ATM_AUTH_API_BASE || '').replace(/\/$/, '');
 let sessionId = null;
 let currentStep = 'card';
 let txType = null;

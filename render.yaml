@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: atm-auth-backend
+    env: docker
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_PROVIDER
+        value: supabase
+      - key: SUPABASE_DATABASE_URL
+        sync: false
+      - key: PUBLIC_BASE_URL
+        sync: false
+      - key: BASE_URL
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false
+      - key: SECRET_KEY
+        generateValue: true
+      - key: SMS_PROVIDER
+        value: twilio
+      - key: TWILIO_ACCOUNT_SID
+        sync: false
+      - key: TWILIO_AUTH_TOKEN
+        sync: false
+      - key: TWILIO_FROM_NUMBER
+        sync: false
+      - key: ENABLE_VOICE_AUTH
+        value: "false"

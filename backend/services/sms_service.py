@@ -1,6 +1,6 @@
 """
 services/sms_service.py
-Send OTP/auth links via Africa's Talking or Twilio.
+Send OTP/auth links via Twilio or development logging.
 """
 import logging
 from backend.config import settings
@@ -32,34 +32,11 @@ async def send_auth_link(phone_number: str, auth_url: str, user_name: str) -> bo
     if provider in ("dev", "console", "log"):
         logger.info(f"[DEV SMS] To {phone_number}:\n{message}")
         return True
-    if provider == "africastalking":
-        return await _send_via_africastalking(phone_number, message)
     if provider == "twilio":
         return await _send_via_twilio(phone_number, message)
 
     logger.error("Unsupported SMS_PROVIDER=%s", settings.SMS_PROVIDER)
     return False
-
-
-async def _send_via_africastalking(phone: str, message: str) -> bool:
-    try:
-        if not settings.AT_API_KEY:
-            logger.error("Africa's Talking credentials are not configured.")
-            return False
-        import africastalking
-        africastalking.initialize(settings.AT_USERNAME, settings.AT_API_KEY)
-        sms = africastalking.SMS
-        response = sms.send(message, [phone])
-        logger.info(f"Africa's Talking response: {response}")
-        # Check status
-        recipients = response.get("SMSMessageData", {}).get("Recipients", [])
-        if recipients:
-            status = recipients[0].get("status", "")
-            return status.lower() in ("success", "sent")
-        return False
-    except Exception as e:
-        logger.error(f"Africa's Talking send failed: {e}")
-        return False
 
 
 async def _send_via_twilio(phone: str, message: str) -> bool:

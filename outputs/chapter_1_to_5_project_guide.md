@@ -82,7 +82,7 @@ Card/PIN -> Voice verification -> SMS/QR face link -> Mobile face verification -
 - `backend/routers/transactions.py`: banking operations after authentication.
 - `backend/services/face_service.py`: face encoding, face comparison, and multi-angle encoding averaging.
 - `backend/services/voice_service.py`: retained voice embedding and verification code.
-- `backend/services/sms_service.py`: Twilio, Africa's Talking, and development SMS logic.
+- `backend/services/sms_service.py`: Twilio and development SMS logic.
 - `backend/utils/security.py`: PIN hashing, token generation, JWT helpers, and expiry helpers.
 - `frontend/atm/index.html`: ATM web interface.
 - `frontend/mobile/face_auth.html`: mobile face verification page.
@@ -300,7 +300,7 @@ FastAPI Backend
         |      users, accounts, auth_sessions, transactions, auth_logs
         |
         +--> SMS Service
-        |      Twilio / Africa's Talking / dev logging
+        |      Twilio / dev logging
         |
         +--> Face Service
                face_recognition / OpenCV fallback
@@ -358,7 +358,7 @@ Backend:
 - face_recognition.
 - OpenCV fallback.
 - SpeechBrain/Torch/Torchaudio/SoundFile/Librosa retained for optional voice authentication.
-- Twilio and Africa's Talking for SMS.
+- Twilio for SMS.
 - qrcode for QR fallback.
 
 Frontend:
@@ -486,7 +486,6 @@ When disabled:
 SMS logic is in `backend/services/sms_service.py`. It supports:
 
 - Development logging mode.
-- Africa's Talking.
 - Twilio.
 
 The current real SMS flow uses Twilio when configured with:

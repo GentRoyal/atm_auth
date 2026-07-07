@@ -15,7 +15,7 @@ Main actors implemented in the code are:
 - ATM user/customer: uses the ATM interface and mobile face verification page.
 - Enrollment/admin/teller actor: implied by `/enroll/*` endpoints for registering users, voice samples, and face images.
 - Backend API: validates credentials, sessions, biometrics, SMS delivery, and transactions.
-- SMS provider: Twilio, Africa's Talking, or development logging mode depending on configuration.
+- SMS provider: Twilio or development logging mode depending on configuration.
 
 ## 2. Actual Implemented Authentication Flow
 
@@ -83,7 +83,7 @@ FastAPI Backend
   -> PostgreSQL/Supabase tables
   -> Voice service: SpeechBrain or MFCC fallback
   -> Face service: face_recognition or OpenCV fallback
-  -> SMS service: Twilio / Africa's Talking / dev log
+  -> SMS service: Twilio / dev log
 
 SMS / QR Link
   -> Mobile Browser UI (/mobile/face-auth?token=...)
@@ -117,7 +117,6 @@ Authenticated ATM Session
 - face_recognition: dlib-based face detection and 128-dimensional face encodings. Used in `face_service.py`.
 - OpenCV (`opencv-python-headless`): Haar cascade and HOG fallback for face encoding when `face_recognition` is unavailable. Used in `face_service.py`.
 - Twilio: SMS sending. Used in `backend/services/sms_service.py`.
-- Africa's Talking: alternate SMS provider. Used in `sms_service.py`.
 - qrcode: generates QR code data URL for the mobile face-auth link. Used in `_qr_code_data_url()` in `backend/routers/atm.py`.
 - python-multipart: required by FastAPI for file/form uploads. Used indirectly by endpoints accepting `Form(...)` and `File(...)`.
 - HTML/CSS/JavaScript: frontend UI and browser APIs. Used in `frontend/atm/index.html` and `frontend/mobile/face_auth.html`.
@@ -346,7 +345,7 @@ Missing tests:
 
 - No full API integration test for the complete route sequence using a real or mocked database.
 - No frontend/browser tests.
-- No Twilio or Africa's Talking integration tests.
+- No Twilio integration tests.
 - No actual SpeechBrain model extraction tests.
 - No actual face_recognition extraction tests using real images.
 - No database transaction/rollback tests.
@@ -383,8 +382,6 @@ Other supported settings in code include:
 - `SECRET_KEY`
 - `ALGORITHM`
 - `SESSION_EXPIRE_MINUTES`
-- `AT_USERNAME`
-- `AT_API_KEY`
 - `BASE_URL`
 - `MOBILE_FACE_URL`
 - `VOICE_SIMILARITY_THRESHOLD`
@@ -487,7 +484,7 @@ Chapter Five: Summary, Conclusion, and Recommendation
 - `backend/routers/transactions.py`: authenticated banking transaction endpoints.
 - `backend/services/voice_service.py`: voice embedding extraction, fallback MFCC embedding, cosine similarity, voice matching.
 - `backend/services/face_service.py`: image decoding, face encoding extraction, OpenCV fallback, Euclidean distance, face matching.
-- `backend/services/sms_service.py`: SMS message construction and providers for dev mode, Africa's Talking, and Twilio.
+- `backend/services/sms_service.py`: SMS message construction and providers for dev mode and Twilio.
 - `backend/utils/security.py`: PIN hashing/verification, token generation, JWT helpers, expiry helpers.
 - `backend/tests/test_auth_flow.py`: unit tests for voice, face, security, SMS, and schemas.
 - `backend/requirements.txt`: full local dependency stack including SpeechBrain, Torch, face_recognition, Twilio, pytest, etc.

@@ -9,7 +9,7 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
 from backend.config import settings
 from backend.database import connect_db, disconnect_db, database
@@ -88,6 +88,15 @@ async def serve_atm():
     if html_path.exists():
         return HTMLResponse(html_path.read_text(encoding="utf-8"), headers=NO_STORE_HEADERS)
     return HTMLResponse("<h2>ATM frontend not found</h2>", status_code=404, headers=NO_STORE_HEADERS)
+
+
+@app.get("/config.js", include_in_schema=False)
+async def frontend_config():
+    return Response(
+        'window.ATM_AUTH_API_BASE = "";\n',
+        media_type="application/javascript",
+        headers=NO_STORE_HEADERS,
+    )
 
 
 @app.get("/mobile", response_class=HTMLResponse, include_in_schema=False)

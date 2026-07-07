@@ -8,3 +8,4 @@ backend/.env
 
 # Model/cache output
 *.log
+frontend/dist/

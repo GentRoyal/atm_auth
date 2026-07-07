@@ -27,7 +27,6 @@ librosa
 
 # HTTP / SMS
 httpx
-africastalking
 twilio
 
 # Utils
