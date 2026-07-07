@@ -668,6 +668,22 @@ function toast(msg, isError = false) {
   setTimeout(() => t.classList.remove('show'), 2800);
 }
 
+async function readApiResponse(res, fallbackMessage) {
+  const text = await res.text();
+  let data = {};
+  if (text) {
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = { detail: text };
+    }
+  }
+  if (!res.ok) {
+    throw new Error(data.detail || fallbackMessage || `Request failed (${res.status})`);
+  }
+  return data;
+}
+
 async function handleAction() {
   if (currentStep === 'card')   await handleCardInsert();
   else if (currentStep === 'voice') await startVoiceRecord();
@@ -689,8 +705,7 @@ async function handleCardInsert() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ card_number: card, pin })
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.detail || 'Card rejected');
+    const data = await readApiResponse(res, 'Card rejected');
     sessionId = data.session_id;
     updateDots(1);
     if (data.stage === 'voice_verified') {
@@ -702,7 +717,7 @@ async function handleCardInsert() {
     setBtn('🔴 RECORD', true);
     toast('Card accepted. Voice verification required.');
   } catch (e) {
-    toast(e.message, true);
+    toast(e.message || 'Card rejected', true);
     setBtn('INSERT CARD');
   }
 }
@@ -768,8 +783,7 @@ async function submitVoice(blob) {
 
   try {
     const res = await fetch(`${API}/atm/verify-voice`, { method: 'POST', body: form });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.detail || 'Voice not recognized');
+    const data = await readApiResponse(res, 'Voice not recognized');
 
     await sendSmsLink('Voice verified ✓ Check your phone');
   } catch (e) {
@@ -855,8 +869,7 @@ async function sendSmsLink(successMessage) {
   const smsForm = new FormData();
   smsForm.append('session_id', sessionId);
   const smsRes = await fetch(`${API}/atm/send-sms`, { method: 'POST', body: smsForm });
-  const smsData = await smsRes.json();
-  if (!smsRes.ok) throw new Error(smsData.detail || 'SMS send failed');
+  const smsData = await readApiResponse(smsRes, 'SMS send failed');
 
   updateDots(2);
   showStep('sms');
@@ -896,7 +909,7 @@ function startPolling() {
 
     try {
       const res = await fetch(`${API}/atm/session/${sessionId}`);
-      const data = await res.json();
+      const data = await readApiResponse(res, 'Could not check session status');
 
       if (data.stage === 'authenticated') {
         clearInterval(pollInterval);
@@ -975,8 +988,7 @@ async function submitTransaction(type, amount, recipient) {
         recipient_account: recipient,
       })
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.detail || 'Transaction failed');
+    const data = await readApiResponse(res, 'Transaction failed');
 
     // Build receipt
     showReceipt(data, type);

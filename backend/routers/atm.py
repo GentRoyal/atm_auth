@@ -70,10 +70,13 @@ async def insert_card(request: Request, body: CardInsertRequest):
     Validate ATM card number + PIN.
     Creates an auth session and returns session_id.
     """
-    # Look up user by card number
-    user = await database.fetch_one(
-        users.select().where(users.c.card_number == body.card_number)
-    )
+    try:
+        user = await database.fetch_one(
+            users.select().where(users.c.card_number == body.card_number)
+        )
+    except Exception as exc:
+        logger.exception("Could not look up card number during insert-card.")
+        raise HTTPException(status_code=503, detail="Database lookup failed. Check backend database configuration and schema.") from exc
 
     if not user or not user["is_active"]:
         raise HTTPException(status_code=401, detail="Card not recognized or account inactive.")
@@ -86,23 +89,27 @@ async def insert_card(request: Request, body: CardInsertRequest):
     session_id = str(uuid.uuid4())
     session_token = generate_session_token()
 
-    await database.execute(
-        auth_sessions.insert().values(
-            id=session_id,
-            user_id=str(user["id"]),
-            card_number=body.card_number,
-            session_token=session_token,
-            stage=SessionStage.card_inserted if settings.ENABLE_VOICE_AUTH else SessionStage.voice_verified,
-            expires_at=session_expiry(),
-            ip_address=str(request.client.host),
-            user_agent=request.headers.get("user-agent"),
-            created_at=datetime.now(timezone.utc),
+    try:
+        await database.execute(
+            auth_sessions.insert().values(
+                id=session_id,
+                user_id=str(user["id"]),
+                card_number=body.card_number,
+                session_token=session_token,
+                stage=SessionStage.card_inserted if settings.ENABLE_VOICE_AUTH else SessionStage.voice_verified,
+                expires_at=session_expiry(),
+                ip_address=str(request.client.host),
+                user_agent=request.headers.get("user-agent"),
+                created_at=datetime.now(timezone.utc),
+            )
         )
-    )
 
-    await _log_event(session_id, str(user["id"]), "card_inserted", True, ip=str(request.client.host))
-    if not settings.ENABLE_VOICE_AUTH:
-        await _log_event(session_id, str(user["id"]), "voice_skipped", True, detail="Voice authentication disabled by configuration")
+        await _log_event(session_id, str(user["id"]), "card_inserted", True, ip=str(request.client.host))
+        if not settings.ENABLE_VOICE_AUTH:
+            await _log_event(session_id, str(user["id"]), "voice_skipped", True, detail="Voice authentication disabled by configuration")
+    except Exception as exc:
+        logger.exception("Could not create auth session during insert-card.")
+        raise HTTPException(status_code=503, detail="Could not create authentication session. Check backend database schema.") from exc
 
     return CardInsertResponse(
         session_id=session_id,
