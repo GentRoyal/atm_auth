@@ -2,6 +2,7 @@
 database.py  –  Async PostgreSQL connection via databases + SQLAlchemy core
 """
 import databases
+import ssl
 import sqlalchemy
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 from sqlalchemy import (
@@ -30,10 +31,16 @@ def _with_query_options(url: str, updates: dict[str, str | None]) -> str:
 def _async_database_url() -> str:
     url = settings.active_database_url
     options = _query_options(url)
-    sslmode = options.get("sslmode")
-    if sslmode and "ssl" not in options:
-        url = _with_query_options(url, {"ssl": "true", "sslmode": None})
+    if options.get("ssl") == "true" or options.get("sslmode") in {"require", "prefer"}:
+        url = _with_query_options(url, {"ssl": None, "sslmode": None})
     return url
+
+
+def _unverified_ssl_context() -> ssl.SSLContext:
+    context = ssl.create_default_context()
+    context.check_hostname = False
+    context.verify_mode = ssl.CERT_NONE
+    return context
 
 
 def _database_options() -> dict:
@@ -41,6 +48,8 @@ def _database_options() -> dict:
     database_options = {}
     if "statement_cache_size" in options:
         database_options["statement_cache_size"] = int(options["statement_cache_size"])
+    if options.get("ssl") == "true" or options.get("sslmode") in {"require", "prefer"}:
+        database_options["ssl"] = _unverified_ssl_context()
     return database_options
 
 
