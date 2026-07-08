@@ -27,7 +27,9 @@ Set these Render environment variables:
 
 ```env
 DATABASE_PROVIDER=supabase
-SUPABASE_DATABASE_URL=postgresql://postgres.PROJECT_REF:PASSWORD@aws-0-REGION.pooler.supabase.com:5432/postgres?ssl=true
+SUPABASE_DATABASE_URL=postgresql://postgres.PROJECT_REF:PASSWORD@aws-0-REGION.pooler.supabase.com:6543/postgres?ssl=true&statement_cache_size=0
+DB_POOL_MIN_SIZE=1
+DB_POOL_MAX_SIZE=3
 PUBLIC_BASE_URL=https://YOUR_RENDER_SERVICE.onrender.com
 BASE_URL=https://YOUR_RENDER_SERVICE.onrender.com
 CORS_ORIGINS=https://YOUR_VERCEL_APP.vercel.app,https://YOUR_RENDER_SERVICE.onrender.com

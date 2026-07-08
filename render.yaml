@@ -9,6 +9,10 @@ services:
         value: supabase
       - key: SUPABASE_DATABASE_URL
         sync: false
+      - key: DB_POOL_MIN_SIZE
+        value: "1"
+      - key: DB_POOL_MAX_SIZE
+        value: "3"
       - key: PUBLIC_BASE_URL
         sync: false
       - key: BASE_URL

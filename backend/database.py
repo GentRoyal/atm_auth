@@ -45,7 +45,10 @@ def _unverified_ssl_context() -> ssl.SSLContext:
 
 def _database_options() -> dict:
     options = _query_options(settings.active_database_url)
-    database_options = {}
+    database_options = {
+        "min_size": settings.DB_POOL_MIN_SIZE,
+        "max_size": settings.DB_POOL_MAX_SIZE,
+    }
     if "statement_cache_size" in options:
         database_options["statement_cache_size"] = int(options["statement_cache_size"])
     if options.get("ssl") == "true" or options.get("sslmode") in {"require", "prefer"}:

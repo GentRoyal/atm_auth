@@ -38,7 +38,11 @@ Supabase is the default database provider. Configure `backend\.env` with your Su
 ```env
 DATABASE_PROVIDER=supabase
 SUPABASE_DATABASE_URL=postgresql://postgres.PROJECT_REF:PASSWORD@aws-0-REGION.pooler.supabase.com:5432/postgres?ssl=true
+DB_POOL_MIN_SIZE=1
+DB_POOL_MAX_SIZE=3
 ```
+
+If Supabase returns `EMAXCONNSESSION` or "max clients reached", reduce `DB_POOL_MAX_SIZE` and prefer the Supabase transaction pooler URL on port `6543` with `statement_cache_size=0`.
 
 To switch to local or self-hosted PostgreSQL:
 

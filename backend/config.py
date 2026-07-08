@@ -18,6 +18,8 @@ class Settings(BaseSettings):
     POSTGRES_DATABASE_URL_SYNC: str | None = None
     DATABASE_URL: str = "postgresql://postgres:postgres@localhost:5432/atm_auth_system"
     DATABASE_URL_SYNC: str | None = None
+    DB_POOL_MIN_SIZE: int = 1
+    DB_POOL_MAX_SIZE: int = 3
 
     # Security
     SECRET_KEY: str = "change-me"
