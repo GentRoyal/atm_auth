@@ -873,6 +873,10 @@ async function sendSmsLink(successMessage) {
 
   updateDots(2);
   showStep('sms');
+  const smsMsg = document.getElementById('smsMsg');
+  smsMsg.textContent = smsData.sms_sent
+    ? 'LINK SENT TO YOUR REGISTERED NUMBER'
+    : 'SMS UNAVAILABLE - SCAN QR CODE TO CONTINUE';
   const phoneEl = document.getElementById('phoneMasked');
   phoneEl.textContent = smsData.phone_masked;
   const facePanel = document.getElementById('faceLinkPanel');
@@ -889,11 +893,13 @@ async function sendSmsLink(successMessage) {
     }
     facePanel.classList.add('show');
     document.getElementById('pollMsg').textContent =
-      'CHECK SMS, OR SCAN THE QR CODE WITH YOUR PHONE CAMERA...';
+      smsData.sms_sent
+        ? 'CHECK SMS, OR SCAN THE QR CODE WITH YOUR PHONE CAMERA...'
+        : 'SCAN THE QR CODE WITH YOUR PHONE CAMERA...';
   }
   setBtn('WAITING...', false);
   startPolling();
-  toast(successMessage);
+  toast(smsData.message || successMessage);
 }
 
 // ── STEP 3: Poll for face auth ────────────────────────────

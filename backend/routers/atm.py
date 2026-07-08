@@ -219,31 +219,39 @@ async def send_sms_link(request: Request, session_id: str = Form(...)):
     face_token = generate_face_token()
     auth_url = f"{settings.face_link_base_url}/mobile/face-auth?{urlencode({'token': face_token})}"
 
-    # Send SMS
+    # Send SMS, but do not block the QR fallback if the provider is down.
     sent = await send_auth_link(user["phone_number"], auth_url, user["full_name"])
     if not sent:
-        logger.error(f"SMS failed for session {session_id}")
-        await _log_event(session_id, str(user["id"]), "sms_sent", False, detail="SMS provider failed")
-        raise HTTPException(status_code=502, detail="Could not send authentication link. Please try again.")
+        logger.warning("SMS failed for session %s; continuing with QR fallback.", session_id)
 
-    # Update session only after the link is deliverable/logged.
     await database.execute(
         auth_sessions.update()
         .where(auth_sessions.c.id == session_id)
         .values(
             stage=SessionStage.sms_sent,
             face_token=face_token,
-            sms_sent_at=datetime.now(timezone.utc),
+            sms_sent_at=datetime.now(timezone.utc) if sent else None,
         )
     )
 
-    await _log_event(session_id, str(user["id"]), "sms_sent", True)
+    await _log_event(
+        session_id,
+        str(user["id"]),
+        "sms_sent",
+        sent,
+        detail=None if sent else "SMS provider failed; QR fallback shown",
+    )
 
     return SMSSentResponse(
         session_id=session_id,
-        message="Authentication link sent to your registered phone number.",
+        message=(
+            "Authentication link sent to your registered phone number."
+            if sent
+            else "SMS could not be sent. Scan the QR code to continue."
+        ),
         phone_masked=get_masked_phone(user["phone_number"]),
         stage=SessionStage.sms_sent,
+        sms_sent=sent,
         auth_url=auth_url,
         qr_code_data_url=_qr_code_data_url(auth_url),
     )

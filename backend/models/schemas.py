@@ -63,6 +63,7 @@ class SMSSentResponse(BaseModel):
     message: str
     phone_masked: str          # e.g. "+234******678"
     stage: SessionStage
+    sms_sent: bool = True
     auth_url: Optional[str] = None
     qr_code_data_url: Optional[str] = None
 
