@@ -275,6 +275,53 @@ class TestSMSService:
         assert result is True
 
 
+
+    @pytest.mark.asyncio
+    async def test_send_auth_link_smsto_mode(self, monkeypatch):
+        from backend.services import sms_service
+
+        class FakeResponse:
+            def raise_for_status(self):
+                return None
+
+            def json(self):
+                return {"message_id": "msg-456", "success": True}
+
+        class FakeAsyncClient:
+            def __init__(self, *args, **kwargs):
+                self.args = args
+                self.kwargs = kwargs
+
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, exc_type, exc, tb):
+                return False
+
+            async def post(self, url, json, headers):
+                assert url == "https://api.sms.to/sms/send"
+                assert json["to"] == "+2348012345678"
+                assert json["sender_id"] == "SecureBank"
+                assert "SecureBank ATM face verification" in json["message"]
+                assert headers["Authorization"] == "Bearer test-key"
+                return FakeResponse()
+
+        import httpx
+
+        monkeypatch.setattr(httpx, "AsyncClient", FakeAsyncClient)
+        monkeypatch.setattr(sms_service.settings, "SMS_PROVIDER", "smsto")
+        monkeypatch.setattr(sms_service.settings, "SMSTO_API_KEY", "test-key")
+        monkeypatch.setattr(sms_service.settings, "SMSTO_SENDER_ID", "SecureBank")
+        monkeypatch.setattr(sms_service.settings, "SMSTO_BASE_URL", "https://api.sms.to")
+
+        result = await sms_service.send_auth_link(
+            "2348012345678",
+            "http://localhost:8000/mobile/face-auth?token=abc",
+            "Ada Okonkwo",
+        )
+
+        assert result is True
+
 # ── Schema Validation Tests ───────────────────────────────
 
 class TestSchemas:

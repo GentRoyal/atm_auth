@@ -35,6 +35,9 @@ class Settings(BaseSettings):
     TERMII_SENDER_ID: str = ""
     TERMII_CHANNEL: str = "generic"
     TERMII_BASE_URL: str = "https://api.ng.termii.com"
+    SMSTO_API_KEY: str = ""
+    SMSTO_SENDER_ID: str = ""
+    SMSTO_BASE_URL: str = "https://api.sms.to"
 
     # URLs
     BASE_URL: str = "http://localhost:8000"
@@ -112,3 +115,5 @@ def get_settings() -> Settings:
 
 
 settings = get_settings()
+
+
