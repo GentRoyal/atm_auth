@@ -46,7 +46,7 @@ class Settings(BaseSettings):
 
     # Thresholds
     VOICE_SIMILARITY_THRESHOLD: float = 0.00 #0.65
-    FACE_SIMILARITY_THRESHOLD: float = 0.80 #0.55
+    FACE_SIMILARITY_THRESHOLD: float = 1.75 #0.55
 
     # Authentication toggles
     ENABLE_VOICE_AUTH: bool = False
