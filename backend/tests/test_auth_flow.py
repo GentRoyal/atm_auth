@@ -322,6 +322,76 @@ class TestSMSService:
 
         assert result is True
 
+    @pytest.mark.asyncio
+    async def test_send_auth_link_infobip_mode(self, monkeypatch):
+        from backend.services import sms_service
+
+        class FakeResponse:
+            def raise_for_status(self):
+                return None
+
+            def json(self):
+                return {
+                    "bulkId": "bulk-123",
+                    "messages": [{"messageId": "message-123"}],
+                }
+
+        class FakeAsyncClient:
+            def __init__(self, *args, **kwargs):
+                assert kwargs["timeout"] == 15.0
+
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, exc_type, exc, tb):
+                return False
+
+            async def post(self, url, json, headers):
+                assert url == "https://test.api.infobip.com/sms/3/messages"
+                sms = json["messages"][0]
+                assert sms["sender"] == "SecureBank"
+                assert sms["destinations"] == [{"to": "2348012345678"}]
+                assert "SecureBank ATM face verification" in sms["content"]["text"]
+                assert headers["Authorization"] == "App test-key"
+                assert headers["Accept"] == "application/json"
+                return FakeResponse()
+
+        import httpx
+
+        monkeypatch.setattr(httpx, "AsyncClient", FakeAsyncClient)
+        monkeypatch.setattr(sms_service.settings, "SMS_PROVIDER", "infobip")
+        monkeypatch.setattr(sms_service.settings, "INFOBIP_API_KEY", "test-key")
+        monkeypatch.setattr(sms_service.settings, "INFOBIP_SENDER_ID", "SecureBank")
+        monkeypatch.setattr(
+            sms_service.settings,
+            "INFOBIP_BASE_URL",
+            "https://test.api.infobip.com/",
+        )
+
+        result = await sms_service.send_auth_link(
+            "+234 801-234-5678",
+            "http://localhost:8000/mobile/face-auth?token=abc",
+            "Ada Okonkwo",
+        )
+
+        assert result is True
+
+    @pytest.mark.asyncio
+    async def test_send_auth_link_infobip_requires_credentials(self, monkeypatch):
+        from backend.services import sms_service
+
+        monkeypatch.setattr(sms_service.settings, "SMS_PROVIDER", "infobip")
+        monkeypatch.setattr(sms_service.settings, "INFOBIP_API_KEY", "")
+        monkeypatch.setattr(sms_service.settings, "INFOBIP_SENDER_ID", "")
+
+        result = await sms_service.send_auth_link(
+            "+2348012345678",
+            "http://localhost:8000/mobile/face-auth?token=abc",
+            "Ada Okonkwo",
+        )
+
+        assert result is False
+
 # ── Schema Validation Tests ───────────────────────────────
 
 class TestSchemas:

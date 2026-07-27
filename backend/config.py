@@ -38,6 +38,9 @@ class Settings(BaseSettings):
     SMSTO_API_KEY: str = ""
     SMSTO_SENDER_ID: str = ""
     SMSTO_BASE_URL: str = "https://api.sms.to"
+    INFOBIP_API_KEY: str = ""
+    INFOBIP_SENDER_ID: str = ""
+    INFOBIP_BASE_URL: str = "https://api.infobip.com"
 
     # URLs
     BASE_URL: str = "http://localhost:8000"

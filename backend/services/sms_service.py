@@ -38,6 +38,8 @@ async def send_auth_link(phone_number: str, auth_url: str, user_name: str) -> bo
         return await _send_via_termii(phone_number, message)
     if provider in ("smsto", "sms_to", "sms.to"):
         return await _send_via_smsto(phone_number, message)
+    if provider == "infobip":
+        return await _send_via_infobip(phone_number, message)
 
     logger.error("Unsupported SMS_PROVIDER=%s", settings.SMS_PROVIDER)
     return False
@@ -143,6 +145,68 @@ async def _send_via_smsto(phone: str, message: str) -> bool:
     except Exception as e:
         logger.error(f"SMS.to send failed: {e}")
         return False
+
+def _format_infobip_phone(phone: str) -> str:
+    """Return the international destination format expected by Infobip."""
+    return "".join(character for character in phone.strip() if character.isdigit())
+
+
+async def _send_via_infobip(phone: str, message: str) -> bool:
+    try:
+        if not all((settings.INFOBIP_API_KEY, settings.INFOBIP_SENDER_ID)):
+            logger.error("Infobip credentials are not configured.")
+            return False
+
+        destination = _format_infobip_phone(phone)
+        if not destination:
+            logger.error("Infobip destination phone number is invalid.")
+            return False
+
+        import httpx
+
+        base_url = settings.INFOBIP_BASE_URL.rstrip("/")
+        payload = {
+            "messages": [
+                {
+                    "sender": settings.INFOBIP_SENDER_ID,
+                    "destinations": [{"to": destination}],
+                    "content": {"text": message},
+                }
+            ]
+        }
+        headers = {
+            "Authorization": f"App {settings.INFOBIP_API_KEY}",
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+        }
+
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            response = await client.post(
+                f"{base_url}/sms/3/messages", json=payload, headers=headers
+            )
+            response.raise_for_status()
+
+        try:
+            data = response.json()
+        except ValueError:
+            data = {}
+
+        response_messages = data.get("messages") if isinstance(data, dict) else None
+        message_id = (
+            response_messages[0].get("messageId")
+            if isinstance(response_messages, list) and response_messages
+            else None
+        )
+        logger.info(
+            "Infobip SMS accepted for %s (message_id=%s)",
+            _mask_phone(phone),
+            message_id or "not returned",
+        )
+        return True
+    except Exception as e:
+        logger.error("Infobip send failed: %s", e)
+        return False
+
 
 def get_masked_phone(phone: str) -> str:
     return _mask_phone(phone)

@@ -33,10 +33,10 @@ DB_POOL_MAX_SIZE=3
 PUBLIC_BASE_URL=https://YOUR_RENDER_SERVICE.onrender.com
 BASE_URL=https://YOUR_RENDER_SERVICE.onrender.com
 CORS_ORIGINS=https://YOUR_VERCEL_APP.vercel.app,https://YOUR_RENDER_SERVICE.onrender.com
-SMS_PROVIDER=twilio
-TWILIO_ACCOUNT_SID=your_twilio_sid
-TWILIO_AUTH_TOKEN=your_twilio_auth_token
-TWILIO_FROM_NUMBER=your_twilio_number
+SMS_PROVIDER=infobip
+INFOBIP_API_KEY=your_infobip_api_key
+INFOBIP_SENDER_ID=your_approved_sender
+INFOBIP_BASE_URL=https://your-account.api.infobip.com
 SECRET_KEY=replace-with-a-long-random-secret
 ENABLE_VOICE_AUTH=false
 ```

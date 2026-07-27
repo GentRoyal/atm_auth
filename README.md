@@ -69,14 +69,14 @@ One option with ngrok:
 ngrok http 8000
 ```
 
-Copy the HTTPS forwarding URL, then set it in `backend\.env`:
+Copy the HTTPS forwarding URL, then set it in `backend\.env`. To use Infobip:
 
 ```env
 PUBLIC_BASE_URL=https://your-ngrok-url.ngrok-free.app
-SMS_PROVIDER=twilio
-TWILIO_ACCOUNT_SID=your-account-sid
-TWILIO_AUTH_TOKEN=your-auth-token
-TWILIO_FROM_NUMBER=your-twilio-number
+SMS_PROVIDER=infobip
+INFOBIP_API_KEY=your-infobip-api-key
+INFOBIP_SENDER_ID=ServiceSMS
+INFOBIP_BASE_URL=https://your-account.api.infobip.com
 ```
 
 Restart Uvicorn after changing `.env`. The SMS link will then look like:
@@ -86,6 +86,11 @@ https://your-ngrok-url.ngrok-free.app/mobile/face-auth?token=...
 ```
 
 The mobile page uses same-origin API calls, so if it was opened from the tunnel URL it will call the tunnel URL too.
+
+Create the Infobip API key with the `sms:message:send` scope. Use the account-specific
+base URL shown in the Infobip portal. Trial accounts can use `ServiceSMS` and can
+send only to verified destination numbers; production accounts should use an
+approved sender.
 
 ## Enrollment Checklist
 
